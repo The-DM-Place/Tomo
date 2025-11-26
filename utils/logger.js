@@ -17,7 +17,10 @@ function formatTime() {
 
 function log(level, color, ...args) {
 	const timestamp = formatTime();
-	console.log(`${color}[${timestamp}] [${level}]${colors.reset}`, ...args);
+	const message = `${color}[${timestamp}] [${level}]${colors.reset} ${args.map(arg => 
+		typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+	).join(' ')}\n`;
+	process.stdout.write(message);
 }
 
 module.exports = {

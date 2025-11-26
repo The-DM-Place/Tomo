@@ -31,12 +31,7 @@ const { v4: uuidv4 } = require('uuid');
  * }
  */
 
-// Map to store moderator username -> ID mappings (you'll need to fill these in)
 const moderatorMap = {
-    // Add your moderator mappings here like:
-    // "@zayyyy3": "123456789012345678",
-    // "@su_il": "123456789012345678",
-    // etc.
 };
 
 function parseTimeString(timeStr) {
@@ -98,7 +93,6 @@ function convertDynoLog(dynoEntry, moderatorMap) {
 }
 
 async function convertLogs(inputFileName) {
-    // Use provided filename or default to the original file
     const fileName = inputFileName || 'dyno_logs_20251119_151409.json';
     const inputFile = path.join(__dirname, '../data', fileName);
     const outputFileName = fileName.replace('.json', '_converted.json');
@@ -110,11 +104,9 @@ async function convertLogs(inputFileName) {
 
     console.log(`Found ${dynoLogs.length} log entries`);
 
-    // Load moderator map if it exists
     let moderatorMap = {};
     if (fs.existsSync(moderatorMapFile)) {
         const rawMap = JSON.parse(fs.readFileSync(moderatorMapFile, 'utf8'));
-        // Filter out entries that still have placeholder values
         Object.entries(rawMap).forEach(([key, value]) => {
             if (value !== 'REPLACE_WITH_DISCORD_ID' && value !== '') {
                 moderatorMap[key] = value;
@@ -123,7 +115,6 @@ async function convertLogs(inputFileName) {
         console.log(`Loaded ${Object.keys(moderatorMap).length} moderator mappings`);
     } else {
         console.log('No moderator map found. Creating template...');
-        // Extract unique moderators
         const uniqueModerators = [...new Set(dynoLogs.map(log => log.moderator))];
         const template = {};
         uniqueModerators.forEach(mod => {
@@ -138,11 +129,9 @@ async function convertLogs(inputFileName) {
     console.log('Converting logs...');
     const convertedLogs = dynoLogs.map(log => convertDynoLog(log, moderatorMap));
 
-    // Write converted logs
     fs.writeFileSync(outputFile, JSON.stringify(convertedLogs, null, 2));
     console.log(`✓ Converted logs saved to: ${outputFile}`);
 
-    // Generate statistics
     const stats = {
         total: convertedLogs.length,
         byType: {},
@@ -179,9 +168,8 @@ async function convertLogs(inputFileName) {
     console.log('\n✓ Conversion complete!');
 }
 
-// Run if called directly
 if (require.main === module) {
-    const inputFileName = process.argv[2]; // Get filename from command line
+    const inputFileName = process.argv[2];
     convertLogs(inputFileName).catch(console.error);
 }
 

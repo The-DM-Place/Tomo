@@ -82,13 +82,11 @@ configSchema.statics.getConfig = async function(guildId = null) {
   try {
     console.log(`Getting config for guild: ${guildId || 'global'}`);
     
-    // Look for guild-specific config first, then fall back to global
     let config = null;
     if (guildId) {
       config = await this.findOne({ guildId: guildId });
     }
     
-    // If no guild-specific config, try global
     if (!config) {
       config = await this.findOne({ configType: 'global' });
     }
@@ -97,7 +95,6 @@ configSchema.statics.getConfig = async function(guildId = null) {
       return config;
     }
 
-    // Create default config for new guilds or global
     console.log(`Creating default config for: ${guildId || 'global'}`);
     const defaultConfig = this.getDefaultConfig(guildId);
     const newConfig = await this.create(defaultConfig);
@@ -106,7 +103,6 @@ configSchema.statics.getConfig = async function(guildId = null) {
   } catch (error) {
     console.error('Error getting config:', error);
     
-    // Return fallback config in case of database issues
     console.log('Using fallback config due to error');
     return this.getFallbackConfig(guildId);
   }
@@ -138,7 +134,6 @@ configSchema.statics.getDefaultConfig = function(guildId = null) {
 };
 
 configSchema.statics.getFallbackConfig = function(guildId = null) {
-  // Return a working config object for fallback
   const fallbackConfig = {
     id: 'fallback',
     configType: guildId ? 'guild' : 'global',
@@ -163,14 +158,12 @@ configSchema.statics.getFallbackConfig = function(guildId = null) {
     }
   };
   
-  // Add methods that other parts of the code expect
   fallbackConfig.save = async function() { return this; };
   fallbackConfig.toObject = function() { return this; };
   
   return fallbackConfig;
 };
 
-// Configuration management methods
 configSchema.statics.setConfig = async function(configData, guildId = null) {
   const existingConfig = await this.findOne({ 
     configType: guildId ? 'guild' : 'global',
