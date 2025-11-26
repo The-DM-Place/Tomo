@@ -51,7 +51,6 @@ moderationActionSchema.statics.logAction = async function ({ type, userId, moder
 
   const savedAction = await this.create(action);
 
-  // Add case to user
   const User = require('./UserModel');
   await User.addCase(userId, caseId);
 

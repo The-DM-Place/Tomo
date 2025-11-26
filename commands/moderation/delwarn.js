@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, StringSelectMenuBuilder, ActionRowBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const ModerationActionModel = require('../../models/ModerationActionModel');
 
@@ -19,7 +19,7 @@ module.exports = {
     try {
       const targetUser = interaction.options.getUser('user');
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const userWarnings = await ModerationActionModel.getUserWarnings(targetUser.id, interaction.guild.id);
 
@@ -95,7 +95,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

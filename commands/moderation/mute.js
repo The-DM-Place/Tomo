@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
@@ -39,7 +39,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -52,7 +52,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -67,7 +67,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -81,7 +81,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -96,7 +96,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -110,7 +110,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -128,7 +128,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -142,7 +142,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -157,11 +157,11 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const dbAction = await ModerationActionModel.logAction({
         type: 'mute',
@@ -219,32 +219,8 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle('🔇 Mute Successful')
-        .setDescription(`Successfully muted **${targetUser.tag}**!`)
-        .addFields(
-          {
-            name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
-          },
-          {
-            name: '⏰ Duration',
-            value: `\`${duration}\``,
-            inline: true
-          },
-          {
-            name: '📋 Case ID',
-            value: `\`${dbAction.caseId}\``,
-            inline: true
-          },
-          {
-            name: '🕐 Expires',
-            value: `<t:${Math.floor(expiryTime.getTime() / 1000)}:R>`,
-            inline: true
-          }
-        )
-        .setThumbnail(targetUser.displayAvatarURL())
-        .setFooter({ text: 'Moderation action completed! 🌸' })
+        .setTitle(`🔨 **${targetUser.tag} was muted** | ${reason}`)
+        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 
       await interaction.editReply({
@@ -271,7 +247,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

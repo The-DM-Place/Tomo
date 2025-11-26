@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
@@ -25,7 +25,7 @@ module.exports = {
       const userInput = interaction.options.getString('user');
       const reason = interaction.options.getString('reason') || 'No reason provided';
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       let userId = null;
       let targetUser = null;
@@ -154,23 +154,9 @@ module.exports = {
       }
 
       const successEmbed = new EmbedBuilder()
-        .setColor(0x90EE90)
-        .setTitle('🎉 Unban Successful')
-        .setDescription(`Successfully unbanned **${targetUser ? targetUser.tag : `ID: ${userId}`}**!`)
-        .addFields(
-          {
-            name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
-          },
-          {
-            name: '📋 Case ID',
-            value: `\`${dbAction.caseId}\``,
-            inline: true
-          }
-        )
-        .setThumbnail(targetUser ? targetUser.displayAvatarURL() : null)
-        .setFooter({ text: 'Moderation action completed! 💖' })
+        .setColor(0xFFB6C1)
+        .setTitle(`🔨 **${targetUser.tag} was unbanned** | ${reason}`)
+        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 
       await interaction.editReply({
@@ -190,7 +176,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, AttachmentBuilder, StringSelectMenuBuilder, ActionRowBuilder, MessageFlags, ChannelType, PermissionsBitField, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, StringSelectMenuBuilder, ActionRowBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const Backup = require('../../models/BackupModel');
 

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
@@ -34,7 +34,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -50,11 +50,11 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       await targetChannel.permissionOverwrites.edit(everyoneRole, {
         SendMessages: false
@@ -123,7 +123,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

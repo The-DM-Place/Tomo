@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const ModerationActionModel = require('../../models/ModerationActionModel');
 const moderationLogger = require('../../utils/moderationLogger');
@@ -25,7 +25,7 @@ module.exports = {
       const caseId = interaction.options.getString('case_id');
       const newReason = interaction.options.getString('new_reason');
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const caseData = await ModerationActionModel.getCase(caseId);
 
@@ -119,7 +119,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

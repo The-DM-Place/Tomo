@@ -21,7 +21,6 @@ class ModerationLogger {
    */
   async logAction(client, action) {
     try {
-      // Check if logging is enabled
       const isLoggingEnabled = await ConfigModel.isLoggingEnabled();
       if (!isLoggingEnabled) {
         logger.info('Moderation logging is disabled, skipping log');
