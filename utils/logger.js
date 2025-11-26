@@ -1,22 +1,30 @@
-const util = require("util");
+const colors = {
+	reset: '\x1b[0m',
+	bright: '\x1b[1m',
+	dim: '\x1b[2m',
+	red: '\x1b[31m',
+	green: '\x1b[32m',
+	yellow: '\x1b[33m',
+	blue: '\x1b[34m',
+	magenta: '\x1b[35m',
+	cyan: '\x1b[36m',
+	white: '\x1b[37m',
+};
 
 function formatTime() {
 	return new Date().toLocaleString();
 }
 
-function log(level, ...args) {
+function log(level, color, ...args) {
 	const timestamp = formatTime();
-	const message = `[${timestamp}] [${level}] ${args.map(arg =>
-		typeof arg === 'object' ? util.inspect(arg, { depth: 5, colors: false }) : String(arg)
-	).join(' ')}\n`;
+	const message = `${color}[${timestamp}] [${level}]${colors.reset} ${args.join(' ')}\n`;
 	process.stdout.write(message);
 }
 
 module.exports = {
-	info: (...args) => log('INFO', ...args),
-	warn: (...args) => log('WARN', ...args),
-	error: (...args) => log('ERROR', ...args),
-	success: (...args) => log('SUCCESS', ...args),
-	debug: (...args) => log('DEBUG', ...args),
+	info: (...args) => log('INFO', colors.blue, ...args),
+	warn: (...args) => log('WARN', colors.yellow, ...args),
+	error: (...args) => log('ERROR', colors.red, ...args),
+	success: (...args) => log('SUCCESS', colors.green, ...args),
+	debug: (...args) => log('DEBUG', colors.magenta, ...args),
 };
-// this is the one
