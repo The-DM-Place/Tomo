@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
 const ModerationActionModel = require('../../models/ModerationActionModel');
 
@@ -41,7 +41,7 @@ module.exports = {
       const typeFilter = interaction.options.getString('type') || 'all';
       const limit = interaction.options.getInteger('limit') || 10;
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const allCases = await ModerationActionModel.find();
 
@@ -167,7 +167,7 @@ module.exports = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
   },

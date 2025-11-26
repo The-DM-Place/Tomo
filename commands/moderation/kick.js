@@ -121,7 +121,7 @@ module.exports = {
         });
       }
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
 
       const dbAction = await ModerationActionModel.logAction({
         type: 'kick',
@@ -170,22 +170,8 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle('👢 Kick Successful')
-        .setDescription(`Successfully kicked **${targetUser.tag}**!`)
-        .addFields(
-          {
-            name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
-          },
-          {
-            name: '📋 Case ID',
-            value: `\`${dbAction.caseId}\``,
-            inline: true
-          }
-        )
-        .setThumbnail(targetUser.displayAvatarURL())
-        .setFooter({ text: 'Moderation action completed! 👋' })
+        .setTitle(`🔨 **${targetUser.tag} was kicked** | ${reason}`)
+        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 
       await interaction.editReply({
