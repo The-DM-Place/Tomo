@@ -161,7 +161,7 @@ module.exports = {
         });
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
 
       const dbAction = await ModerationActionModel.logAction({
         type: 'mute',
@@ -219,7 +219,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(`🔨 **${targetUser.tag} was muted** | ${reason}`)
+        .setDescription(`🔨 **${targetUser.tag} was muted** | ${reason}`)
         .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 

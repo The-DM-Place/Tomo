@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
+const WarningsModel = require('../../models/WarningsModel');
 const ConfigModel = require('../../models/ConfigModel');
 const { processBanEmbedTemplate } = require('../../utils/templateProcessor');
 
@@ -85,7 +86,7 @@ module.exports = {
         }
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
 
       const dbAction = await ModerationActionModel.logAction({
         type: 'warn',
@@ -93,6 +94,8 @@ module.exports = {
         moderatorId: interaction.user.id,
         reason: reason
       });
+
+      await WarningsModel.addWarning(targetUser.id, interaction.user.id, reason, dbAction.caseId);
 
       const dmEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
@@ -320,7 +323,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(`🔨 **${targetUser.tag} was warned** | ${reason}`)
+        .setDescription(`🔨 **${targetUser.tag} was warned** | ${reason}`)
         .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 

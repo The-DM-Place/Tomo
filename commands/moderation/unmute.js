@@ -171,22 +171,8 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle('🔊 Unmute Successful')
-        .setDescription(`Successfully unmuted **${targetUser.tag}**!`)
-        .addFields(
-          {
-            name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
-          },
-          {
-            name: '📋 Case ID',
-            value: `\`${dbAction.caseId}\``,
-            inline: true
-          }
-        )
-        .setThumbnail(targetUser.displayAvatarURL())
-        .setFooter({ text: 'They can speak again! 🌸' })
+        .setDescription(`🔨 **${targetUser.tag} was unmuted** | ${reason}`)
+        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 
       await interaction.editReply({

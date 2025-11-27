@@ -207,7 +207,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(`🔨 **${targetUser.tag} was banned** | ${reason}`)
+        .setDescription(`🔨 **${targetUser.tag} was banned** | ${reason}`)
         .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 

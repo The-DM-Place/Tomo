@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, StringSelectMenuBuilder, ActionRowBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
-const ModerationActionModel = require('../../models/ModerationActionModel');
+const WarningsModel = require('../../models/WarningsModel');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -21,7 +21,7 @@ module.exports = {
 
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-      const userWarnings = await ModerationActionModel.getUserWarnings(targetUser.id, interaction.guild.id);
+      const userWarnings = await WarningsModel.getUserWarnings(targetUser.id);
 
       if (userWarnings.length === 0) {
         const embed = new EmbedBuilder()
