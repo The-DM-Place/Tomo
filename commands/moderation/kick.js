@@ -170,7 +170,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(`🔨 **${targetUser.tag} was kicked** | ${reason}`)
+        .setDescription(`🔨 **${targetUser.tag} was kicked** | ${reason}`)
         .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 

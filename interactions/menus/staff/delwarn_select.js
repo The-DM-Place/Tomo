@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const ModerationActionModel = require('../../../models/ModerationActionModel');
+const WarningsModel = require('../../../models/WarningsModel');
 
 module.exports = {
   customId: 'delwarn_select',
@@ -10,7 +10,7 @@ module.exports = {
 
       await interaction.deferUpdate();
 
-      const warningCase = await ModerationActionModel.getCase(caseId);
+      const warningCase = await WarningsModel.getWarningByCaseId(caseId);
 
       if (!warningCase) {
         const embed = new EmbedBuilder()
@@ -29,7 +29,7 @@ module.exports = {
       const targetUser = await interaction.client.users.fetch(warningCase.userId).catch(() => null);
       const moderator = await interaction.client.users.fetch(warningCase.moderatorId).catch(() => null);
 
-      const deleted = await ModerationActionModel.deleteCase(caseId);
+      const deleted = await WarningsModel.removeWarning(caseId);
 
       if (!deleted) {
         const embed = new EmbedBuilder()

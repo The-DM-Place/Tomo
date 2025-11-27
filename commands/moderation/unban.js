@@ -25,7 +25,7 @@ module.exports = {
       const userInput = interaction.options.getString('user');
       const reason = interaction.options.getString('reason') || 'No reason provided';
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
 
       let userId = null;
       let targetUser = null;
@@ -155,7 +155,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(`🔨 **${targetUser.tag} was unbanned** | ${reason}`)
+        .setDescription(`🔨 **${targetUser.tag} was unbanned** | ${reason}`)
         .setFooter({ text: `Case ID: #${dbAction.caseId}` })
         .setTimestamp();
 
