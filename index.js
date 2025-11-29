@@ -8,6 +8,7 @@ const { loadButtons } = require('./handlers/buttonHandler');
 const { loadModals } = require('./handlers/modalHandler');
 const { loadSelectMenus } = require('./handlers/selectMenuHandler');
 
+// this shit actually works
 const logger = require('./utils/logger');
 console.log("CONSOLE CALLED");
 process.stdout.write("STDOUT CALLED\n");
