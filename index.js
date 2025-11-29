@@ -9,6 +9,8 @@ const { loadModals } = require('./handlers/modalHandler');
 const { loadSelectMenus } = require('./handlers/selectMenuHandler');
 
 const logger = require('./utils/logger');
+console.log("CONSOLE CALLED");
+process.stdout.write("STDOUT CALLED\n");
 
 const client = new Client({
 	intents: [
