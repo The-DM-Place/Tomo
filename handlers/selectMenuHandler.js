@@ -21,14 +21,14 @@ async function getAllJsFiles(dir) {
 async function loadSelectMenus(client) {
     const selectMenusPath = path.join(__dirname, '..', 'interactions', 'menus');
 
-    logger.info(`Loading select menus from: ${selectMenusPath}`);
+    console.log(`[INFO] Loading select menus from: ${selectMenusPath}`);
 
     try {
         await fs.access(selectMenusPath);
 
         const jsFiles = await getAllJsFiles(selectMenusPath);
 
-        logger.info(`Found ${jsFiles.length} select menu handler files`);
+        console.log(`[INFO] Found ${jsFiles.length} select menu handler files`);
 
         for (const filePath of jsFiles) {
             const file = path.basename(filePath);
@@ -39,59 +39,58 @@ async function loadSelectMenus(client) {
                 const selectMenu = require(filePath);
 
                 if (!selectMenu.customId || !selectMenu.execute) {
-                    logger.warn(
-                        `Select menu file ${file} is missing required properties (customId or execute)`
+                    console.log(
+                        `[WARN] Select menu file ${file} is missing required properties (customId or execute)`
                     );
                     continue;
                 }
 
                 client.selectMenus.set(selectMenu.customId, selectMenu);
 
-                logger.success(
-                    `Loaded select menu: ${selectMenu.customId} (${file})`
+                console.log(
+                    `[SUCCESS] Loaded select menu: ${selectMenu.customId} (${file})`
                 );
             } catch (error) {
-                logger.error(`Error loading select menu from ${file}:`, error);
+                console.log(`[ERROR] Error loading select menu from ${file}:`, error);
             }
         }
 
-        logger.info(`Total select menus loaded: ${client.selectMenus.size}`);
-        logger.info(`Loaded select menu IDs: ${Array.from(client.selectMenus.keys()).join(', ')}`);
+        console.log(`[INFO] Total select menus loaded: ${client.selectMenus.size}`);
+        console.log(`[INFO] Loaded select menu IDs: ${Array.from(client.selectMenus.keys()).join(', ')}`);
     } catch (error) {
         if (error.code === 'ENOENT') {
-            logger.warn('Select menus directory not found, creating it...');
+            console.log('[WARN] Select menus directory not found, creating it...');
             await fs.mkdir(selectMenusPath, { recursive: true });
         } else {
-            logger.error('Error loading select menus:', error);
+            console.log('[ERROR] Error loading select menus:', error);
         }
     }
 }
 
 async function handleSelectMenuInteraction(interaction) {
-    logger.info(`Handling select menu interaction: ${interaction.customId}`);
-    logger.info(`Available select menus: ${Array.from(interaction.client.selectMenus.keys()).join(', ')}`);
+    console.log(`[INFO] Handling select menu interaction: ${interaction.customId}`);
+    console.log(`[INFO] Available select menus: ${Array.from(interaction.client.selectMenus.keys()).join(', ')}`);
     
     let selectMenu = interaction.client.selectMenus.get(interaction.customId);
-    logger.info(`Exact match result: ${selectMenu ? 'Found' : 'Not found'}`);
-
+    console.log(`[INFO] Exact match result: ${selectMenu ? 'Found' : 'Not found'}`);
     if (!selectMenu) {
-        logger.info('Trying regex patterns...');
+        console.log('[INFO] Trying regex patterns...');
         for (const [key, selectMenuHandler] of interaction.client.selectMenus) {
-            logger.info(`Checking pattern: ${key} (${selectMenuHandler.customId})`);
+            console.log(`[INFO] Checking pattern: ${key} (${selectMenuHandler.customId})`);
             if (
                 selectMenuHandler.customId instanceof RegExp &&
                 selectMenuHandler.customId.test(interaction.customId)
             ) {
                 selectMenu = selectMenuHandler;
-                logger.info(`Regex match found: ${key}`);
+                console.log(`[INFO] Regex match found: ${key}`);
                 break;
             }
         }
     }
 
     if (!selectMenu) {
-        logger.warn(
-            `No select menu handler found for customId: ${interaction.customId}. Available handlers: ${Array.from(interaction.client.selectMenus.keys()).join(', ')}`
+        console.log(
+            `[WARN] No select menu handler found for customId: ${interaction.customId}. Available handlers: ${Array.from(interaction.client.selectMenus.keys()).join(', ')}`
         );
         
         try {
@@ -100,20 +99,20 @@ async function handleSelectMenuInteraction(interaction) {
                 ephemeral: true,
             });
         } catch (error) {
-            logger.error('Failed to send select menu not found message:', error);
+            console.log('[ERROR] Failed to send select menu not found message:', error);
         }
         return;
     }
 
-    logger.info(`Executing select menu: ${interaction.customId}`);
+    console.log(`[INFO] Executing select menu: ${interaction.customId}`);
     try {
         await selectMenu.execute(interaction);
-        logger.info(
-            `Select menu executed: ${interaction.customId} by ${interaction.user.tag}`
+        console.log(
+            `[INFO] Select menu executed: ${interaction.customId} by ${interaction.user.tag}`
         );
     } catch (error) {
-        logger.error(
-            `Error executing select menu ${interaction.customId}:`,
+        console.log(
+            `[ERROR] Error executing select menu ${interaction.customId}:`,
             error
         );
 
@@ -130,7 +129,7 @@ async function handleSelectMenuInteraction(interaction) {
                 await interaction.reply({ content: errorMessage, ephemeral: true });
             }
         } catch (followUpError) {
-            logger.error('Failed to send error message to user:', followUpError);
+            console.log('[ERROR] Failed to send error message to user:', followUpError);
         }
     }
 }
@@ -148,17 +147,17 @@ async function reloadSelectMenu(client, customId) {
 
                 if (selectMenu.customId === customId) {
                     client.selectMenus.set(selectMenu.customId, selectMenu);
-                    logger.success(`Reloaded select menu: ${customId}`);
+                    console.log(`[INFO] Reloaded select menu: ${customId}`);
                     return true;
                 }
             } catch (error) {
-                logger.error(`Error reloading select menu ${customId}:`, error);
+                console.log(`[ERROR] Error reloading select menu ${customId}:`, error);
             }
         }
 
         return false;
     } catch (error) {
-        logger.error(`Error reloading select menu ${customId}:`, error);
+        console.log(`[ERROR] Error reloading select menu ${customId}:`, error);
         return false;
     }
 }
