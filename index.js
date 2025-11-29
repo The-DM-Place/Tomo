@@ -8,10 +8,7 @@ const { loadButtons } = require('./handlers/buttonHandler');
 const { loadModals } = require('./handlers/modalHandler');
 const { loadSelectMenus } = require('./handlers/selectMenuHandler');
 
-// this shit actually works
 const logger = require('./utils/logger');
-console.log("CONSOLE CALLED");
-process.stdout.write("STDOUT CALLED\n");
 
 const client = new Client({
 	intents: [
@@ -35,27 +32,27 @@ client.selectMenus = new Collection();
 
 async function initializeBot() {
 	try {
-		console.log('[INFO] Connecting to database...');
+		logger.info('Connecting to the database...');
 		require('./database/connection');
 
-		console.log('[INFO] Loading commands...');
+		logger.info('Loading commands...');
 		await loadCommands(client);
 
-		console.log('[INFO] Loading events...');
+		logger.info('Loading events...');
 		await loadEvents(client);
 
-		console.log('[INFO] Loading button handlers...');
+		logger.info('Loading button handlers...');
 		await loadButtons(client);
 
-		console.log('[INFO] Loading modal handlers...');
+		logger.info('Loading modal handlers...');
 		await loadModals(client);
 
-		console.log('[INFO] Loading select menu handlers...');
+		logger.info('Loading select menu handlers...');
 		await loadSelectMenus(client);
 
-		console.log('[INFO] Bot initialization complete!');
+		logger.info('Bot initialization complete!');
 	} catch (error) {
-		console.log('[ERROR] Error during bot initialization:', error);
+		logger.error('Error during bot initialization:', error);
 		process.exit(1);
 	}
 }

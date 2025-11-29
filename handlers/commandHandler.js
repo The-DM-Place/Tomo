@@ -20,7 +20,7 @@ async function getCommandFiles(dir, baseDir = dir) {
 			}
 		}
 	} catch (error) {
-		console.log(`[ERROR] Error reading directory ${dir}:`, error);
+		logger.error(`Error reading directory ${dir}:`, error);
 	}
 
 	return commandFiles;
@@ -35,7 +35,7 @@ async function loadCommands(client) {
 
 		const commandFiles = await getCommandFiles(commandsPath);
 
-		console.log(`[INFO] Found ${commandFiles.length} command files`);
+		logger.info(`Found ${commandFiles.length} command files`);
 
 		for (const filePath of commandFiles) {
 			try {
@@ -44,8 +44,8 @@ async function loadCommands(client) {
 				const command = require(filePath);
 
 				if (!command.data || !command.execute) {
-					console.log(
-						`[WARN] Command at ${filePath} is missing required properties (data or execute)`
+					logger.warn(
+						`Command at ${filePath} is missing required properties (data or execute)`
 					);
 					continue;
 				}
@@ -54,25 +54,25 @@ async function loadCommands(client) {
 				commands.push(command.data.toJSON());
 
 				const relativePath = path.relative(commandsPath, filePath);
-				console.log(
-					`[SUCCESS] Loaded command: ${command.data.name} (${relativePath})`
+				logger.success(
+					`Loaded command: ${command.data.name} (${relativePath})`
 				);
 			} catch (error) {
-				console.log(`[ERROR] Error loading command from ${filePath}:`, error);
+				logger.error(`Error loading command from ${filePath}:`, error);
 			}
 		}
 
 		if (commands.length > 0) {
 			await registerSlashCommands(commands);
 		} else {
-			console.log('[WARN] No valid commands found to register');
+			logger.warn('No valid commands found to register');
 		}
 	} catch (error) {
 		if (error.code === 'ENOENT') {
-			console.log('[WARN] Commands directory not found, creating it...');
+			logger.warn('Commands directory not found, creating it...');
 			await fs.mkdir(commandsPath, { recursive: true });
 		} else {
-			console.log('[ERROR] Error loading commands:', error);
+			logger.error('Error loading commands:', error);
 		}
 	}
 }
@@ -81,8 +81,8 @@ async function registerSlashCommands(commands) {
 	const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 	try {
-		console.log(
-			`[INFO] Started refreshing ${commands.length} application (/) commands.`
+		logger.info(
+			`Started refreshing ${commands.length} application (/) commands.`
 		);
 
 		if (process.env.GUILD_ID) {
@@ -93,19 +93,19 @@ async function registerSlashCommands(commands) {
 				),
 				{ body: commands }
 			);
-			console.log(
-				`[SUCCESS] Successfully reloaded ${commands.length} guild application (/) commands.`
+			logger.success(
+				`Successfully reloaded ${commands.length} guild application (/) commands.`
 			);
 		} else {
 			await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
 				body: commands,
 			});
-			console.log(
-				`[SUCCESS] Successfully reloaded ${commands.length} global application (/) commands.`
+			logger.success(
+				`Successfully reloaded ${commands.length} global application (/) commands.`
 			);
 		}
 	} catch (error) {
-		console.log('[ERROR] Error registering slash commands:', error);
+		logger.error('Error registering slash commands:', error);
 	}
 }
 
@@ -120,11 +120,11 @@ async function reloadCommand(client, commandName) {
 
 			if (command.data && command.data.name === commandName) {
 				client.commands.set(command.data.name, command);
-				console.log(`[SUCCESS] Reloaded command: ${commandName}`);
+				logger.success(`Reloaded command: ${commandName}`);
 				return true;
 			}
 		} catch (error) {
-			console.log(`[ERROR] Error reloading command ${commandName}:`, error);
+			logger.error(`Error reloading command ${commandName}:`, error);
 		}
 	}
 
