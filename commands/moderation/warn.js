@@ -280,7 +280,7 @@ module.exports = {
               if (appealsEnabled && appealInvite) {
                 banDmEmbed.addFields({
                   name: '⚖️ Appeal This Ban',
-                  value: `If you believe this ban was unfair, you can join our appeal server to submit an appeal.\n\n**📋 Your Case ID:** \`${automodDbAction.caseId}\`\n**🆔 Your User ID:** \`${targetUser.id}\`\n\nMake sure to provide these details when appealing.`,
+                  value: `If you believe this ban was unfair, you can join our appeal server to submit an appeal.\n\n**📋 Your Case ID:** \`${automodDbAction.caseId}\`\n**🆔 Your User ID:** \`${targetUser.id}\`\n`,
                   inline: false
                 });
 
