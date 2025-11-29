@@ -1,71 +1,68 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 const logger = require('../utils/logger');
-
-// Ensure database connection is initialized
-require('../database/connection');
 
 const configSchema = new Schema({
   configType: {
-    type: 'string',
+    type: String,
     required: true,
     unique: true,
     default: 'global'
   },
   guildId: {
-    type: 'string',
+    type: String,
     required: false,
     default: null
   },
   staffRoles: {
-    type: 'array',
+    type: [String],
     default: []
   },
   commands: {
-    type: 'object',
+    type: Object,
     default: {}
   },
   logsChannelId: {
-    type: 'string',
+    type: String,
     default: null
   },
   messageLogsChannelId: {
-    type: 'string',
+    type: String,
     default: null
   },
   appealsChannelId: {
-    type: 'string',
+    type: String,
     default: null
   },
   messageLoggingEnabled: {
-    type: 'boolean',
+    type: Boolean,
     default: false
   },
   messageLogsBlacklist: {
-    type: 'array',
+    type: [String],
     default: []
   },
   appealInvite: {
-    type: 'string',
+    type: String,
     default: null
   },
   loggingEnabled: {
-    type: 'boolean',
+    type: Boolean,
     default: true
   },
   appealsEnabled: {
-    type: 'boolean',
+    type: Boolean,
     default: true
   },
   automodEnabled: {
-    type: 'boolean',
+    type: Boolean,
     default: true
   },
   automodRules: {
-    type: 'array',
+    type: Array,
     default: []
   },
   banEmbed: {
-    type: 'object',
+    type: Object,
     default: {
       title: '🔨 You have been banned',
       description: 'You have been banned from **{server}**',

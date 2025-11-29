@@ -1,34 +1,34 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 
 const moderationActionSchema = new Schema({
   type: {
-    type: 'string',
+    type: String,
     required: true,
     enum: ['warn', 'mute', 'ban', 'kick', 'unban', 'unmute', 'role persist']
   },
   userId: {
-    type: 'string',
+    type: String,
     required: true
   },
   moderatorId: {
-    type: 'string',
+    type: String,
     required: true
   },
   reason: {
-    type: 'string',
+    type: String,
     default: 'No reason provided'
   },
   duration: {
-    type: 'string',
+    type: String,
     default: null
   },
   caseId: {
-    type: 'string',
+    type: String,
     required: true,
     unique: true
   },
   timestamp: {
-    type: 'date',
+    type: Date,
     default: () => new Date()
   }
 }, {
@@ -51,7 +51,7 @@ moderationActionSchema.statics.logAction = async function ({ type, userId, moder
 
   const savedAction = await this.create(action);
 
-  const User = require('./UserModel');
+  const User = require('./Usermodel');
   await User.addCase(userId, caseId);
 
   return savedAction;
