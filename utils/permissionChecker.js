@@ -72,7 +72,7 @@ class PermissionChecker {
       const userRoles = interaction.member?.roles?.cache ? 
         Array.from(interaction.member.roles.cache.keys()) : [];
       const isOwner = interaction.guild?.ownerId === interaction.user.id;
-      const config = await ConfigModel.getConfig();
+      const config = await ConfigModel.getConfigCached();
       const command = config.commands?.[commandName];
 
       return {
