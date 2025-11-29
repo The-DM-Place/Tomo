@@ -93,7 +93,7 @@ function convertDynoLog(dynoEntry, moderatorMap) {
 }
 
 async function convertLogs(inputFileName) {
-    const fileName = inputFileName || 'dyno_logs_20251119_151409.json';
+    const fileName = inputFileName || 'dyno_modlogs_20251129_134721.json';
     const inputFile = path.join(__dirname, '../data', fileName);
     const outputFileName = fileName.replace('.json', '_converted.json');
     const outputFile = path.join(__dirname, '../data', outputFileName);
@@ -127,7 +127,8 @@ async function convertLogs(inputFileName) {
     }
 
     console.log('Converting logs...');
-    const convertedLogs = dynoLogs.map(log => convertDynoLog(log, moderatorMap));
+    let convertedLogs = dynoLogs.map(log => convertDynoLog(log, moderatorMap));
+    convertedLogs.sort((a, b) => parseInt(a.caseId) - parseInt(b.caseId));
 
     fs.writeFileSync(outputFile, JSON.stringify(convertedLogs, null, 2));
     console.log(`✓ Converted logs saved to: ${outputFile}`);

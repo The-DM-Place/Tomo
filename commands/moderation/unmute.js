@@ -62,7 +62,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -75,7 +75,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -89,7 +89,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -104,7 +104,7 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -118,12 +118,11 @@ module.exports = {
 
         return await interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
-      await interaction.deferReply({ ephemeral: true });
-
+      await interaction.deferReply();
       const dbAction = await ModerationActionModel.logAction({
         type: 'unmute',
         userId: targetUser.id,
