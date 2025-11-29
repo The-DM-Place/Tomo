@@ -67,12 +67,14 @@ module.exports = {
         });
       }
 
+      // For large ban lists, fetch the ban directly by userId
       let isBanned = false;
+      let banInfo = null;
       try {
-        const bans = await interaction.guild.bans.fetch();
-        isBanned = bans.has(userId);
+        banInfo = await interaction.guild.bans.fetch(userId);
+        isBanned = !!banInfo;
       } catch (error) {
-        console.log('Error checking ban status:', error);
+        isBanned = false;
       }
 
       if (!isBanned) {
