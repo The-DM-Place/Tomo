@@ -1,17 +1,17 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 
 const userSchema = new Schema({
   userId: {
-    type: 'string',
+    type: String,
     required: true,
     unique: true
   },
   cases: {
-    type: 'array',
+    type: [String],
     default: []
   },
   createdAt: {
-    type: 'date',
+    type: Date,
     default: () => new Date()
   }
 }, {

@@ -1,24 +1,24 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 
 const userNoteSchema = new Schema({
   userId: {
-    type: 'string',
+    type: String,
     required: true
   },
   moderatorId: {
-    type: 'string',
+    type: String,
     required: true
   },
   note: {
-    type: 'string',
+    type: String,
     required: true
   },
   timestamp: {
-    type: 'date',
+    type: Date,
     default: () => new Date()
   },
   noteId: {
-    type: 'string',
+    type: String,
     unique: true,
     default: () => Date.now().toString()
   }

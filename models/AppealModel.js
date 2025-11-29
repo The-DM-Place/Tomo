@@ -1,45 +1,45 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 
 const appealSchema = new Schema({
   caseId: {
-    type: 'string',
+    type: String,
     required: true
   },
   userId: {
-    type: 'string',
+    type: String,
     required: true
   },
   reason: {
-    type: 'string',
+    type: String,
     required: true
   },
   learned: {
-    type: 'string',
+    type: String,
     required: true
   },
   comments: {
-    type: 'string',
+    type: String,
     default: null
   },
   contact: {
-    type: 'string',
+    type: String,
     default: null
   },
   status: {
-    type: 'string',
+    type: String,
     enum: ['pending', 'approved', 'denied'],
     default: 'pending'
   },
   submittedAt: {
-    type: 'date',
+    type: Date,
     default: () => new Date()
   },
   processedAt: {
-    type: 'date',
+    type: Date,
     default: null
   },
   processedBy: {
-    type: 'string',
+    type: String,
     default: null
   }
 }, {

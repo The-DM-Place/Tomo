@@ -1,31 +1,31 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
 
 const warningsSchema = new Schema({
     userId: {
-        type: 'string',
+        type: String,
         required: true
     },
     moderatorId: {
-        type: 'string',
+        type: String,
         required: true
     },
     reason: {
-        type: 'string',
+        type: String,
         default: 'No reason provided'
     },
     caseId: {
-        type: 'string',
+        type: String,
         required: true,
     },
     timestamp: {
-        type: 'date',
+        type: Date,
         default: () => new Date()
     }
 }, {
     timestamps: true
 });
 
-// static shite
+// static methods
 warningsSchema.statics.getUserWarnings = async function(userId) {
     return this.find({ userId });
 };
@@ -48,4 +48,6 @@ warningsSchema.statics.removeWarning = async function(caseId) {
     return this.deleteMany({ caseId });
 };
 
-module.exports = model('Warnings', warningsSchema);
+const Warnings = model('Warnings', warningsSchema);
+
+module.exports = Warnings;

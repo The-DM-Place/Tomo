@@ -1,64 +1,45 @@
-const { Schema, model } = require('synz-db');
+const { Schema, model } = require('mongoose');
+
+const permissionSchema = new Schema({
+    id: { type: String, required: true },
+    type: { type: Number, required: true },
+    allow: { type: String, required: true },
+    deny: { type: String, required: true }
+}, { _id: false });
+
+const channelSchema = new Schema({
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    type: { type: Number, required: true },
+    position: { type: Number, required: true },
+    permissions: { type: [permissionSchema], default: [] },
+    parentId: { type: String }
+}, { _id: false });
+
+const roleSchema = new Schema({
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    permissions: { type: [String], default: [] },
+    position: { type: Number },
+    color: { type: Number }
+}, { _id: false });
 
 const backupSchema = new Schema({
-    channels: {
-        type: 'array',
-        default: [],
-        items: {
-            type: 'object',
-            properties: {
-                id: { type: 'string', required: true },
-                name: { type: 'string', required: true },
-                type: { type: 'number', required: true },
-                position: { type: 'number', required: true },
-                permissions: {
-                    type: 'array',
-                    default: [],
-                    items: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'string', required: true },
-                            type: { type: 'number', required: true },
-                            allow: { type: 'string', required: true },
-                            deny: { type: 'string', required: true }
-                        }
-                    }
-                },
-                parentId: { type: 'string' }
-            }
-        }
-    },
-    roles: {
-        type: 'array',
-        default: [],
-        items: {
-            type: 'object',
-            properties: {
-                id: { type: 'string', required: true },
-                name: { type: 'string', required: true },
-                permissions: { type: 'array', default: [] },
-                position: { type: 'number' },
-                color: { type: 'number' }
-            }
-        }
-    },
-    createdAt: {
-        type: 'date',
-        default: () => new Date()
-    }
+    channels: { type: [channelSchema], default: [] },
+    roles: { type: [roleSchema], default: [] },
+    createdAt: { type: Date, default: () => new Date() }
 }, {
     timestamps: true
 });
 
-// static stuff
+// static methods
 
 backupSchema.statics.createBackup = async function (channels, roles) {
     const count = await this.countDocuments();
     if (count >= 3) {
-        const oldestArr = await this.find({}, { sort: { createdAt: 1 }, limit: 1 });
-        const oldest = oldestArr[0];
+        const oldest = await this.findOne({}, {}, { sort: { createdAt: 1 } });
         if (oldest) {
-            await this.findByIdAndDelete(oldest.id || oldest._id);
+            await this.findByIdAndDelete(oldest._id);
         }
     }
     return await this.create({ channels, roles, createdAt: new Date() });
