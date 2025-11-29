@@ -120,6 +120,21 @@ module.exports = {
         }
       }
 
+      const existingBan = await interaction.guild.bans.fetch(targetUser.id).catch(() => null);
+      if (existingBan) {
+        const alreadyBannedEmbed = new EmbedBuilder()
+          .setColor(0xFFB6C1)
+          .setTitle('🔨 Already Banned')
+          .setDescription(`${targetUser.tag} is already banned from this server!`)
+          .setFooter({ text: 'No duplicate ban action was logged.' })
+          .setTimestamp();
+
+        return await interaction.reply({
+          embeds: [alreadyBannedEmbed],
+          ephemeral: true
+        });
+      }
+
       await interaction.deferReply();
 
       const dbAction = await ModerationActionModel.logAction({
