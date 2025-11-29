@@ -1,3 +1,16 @@
+let configCache = null;
+let lastLoaded = 0;
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+async function getConfigCached() {
+  const now = Date.now();
+  if (!configCache || now - lastLoaded > CACHE_TTL) {
+    configCache = await Config.findOne({ configType: 'global' }).lean() || {};
+    lastLoaded = now;
+  }
+  return configCache;
+}
+
 const { Schema, model } = require('mongoose');
 const logger = require('../utils/logger');
 
@@ -5,7 +18,6 @@ const configSchema = new Schema({
   configType: {
     type: String,
     required: true,
-    unique: true,
     default: 'global'
   },
   guildId: {
@@ -74,33 +86,32 @@ const configSchema = new Schema({
   timestamps: true
 });
 
+// Indexes for fast lookups
+configSchema.index({ configType: 1 });
+configSchema.index({ guildId: 1 });
+// Compound index for queries involving both configType and guildId
+configSchema.index({ configType: 1, guildId: 1 });
+
 // Static methods
 configSchema.statics.getConfig = async function(guildId = null) {
   try {
-    console.log(`Getting config for guild: ${guildId || 'global'}`);
-    
+    // Fast lookup with .lean() for read-only config
     let config = null;
     if (guildId) {
-      config = await this.findOne({ guildId: guildId });
+      config = await this.findOne({ guildId: guildId }).lean();
     }
-    
     if (!config) {
-      config = await this.findOne({ configType: 'global' });
+      config = await this.findOne({ configType: 'global' }).lean();
     }
-    
     if (config) {
       return config;
     }
-
-    console.log(`Creating default config for: ${guildId || 'global'}`);
+    // Create default config if not found
     const defaultConfig = this.getDefaultConfig(guildId);
     const newConfig = await this.create(defaultConfig);
-    
     return newConfig;
   } catch (error) {
     console.error('Error getting config:', error);
-    
-    console.log('Using fallback config due to error');
     return this.getFallbackConfig(guildId);
   }
 };
@@ -162,55 +173,65 @@ configSchema.statics.getFallbackConfig = function(guildId = null) {
 };
 
 configSchema.statics.setConfig = async function(configData, guildId = null) {
-  const existingConfig = await this.findOne({ 
-    configType: guildId ? 'guild' : 'global',
-    guildId: guildId 
-  });
-  
-  if (existingConfig) {
-    Object.assign(existingConfig, configData);
-    return await existingConfig.save();
-  } else {
-    const newConfigData = {
-      ...configData,
-      configType: guildId ? 'guild' : 'global',
-      guildId: guildId
-    };
-    return await this.create(newConfigData);
-  }
+  // Atomic upsert for config
+  const filter = { configType: guildId ? 'guild' : 'global', guildId: guildId };
+  const update = { $set: configData };
+  const options = { new: true, upsert: true };
+  return await this.findOneAndUpdate(filter, update, options);
 };
 
 configSchema.statics.setLogsChannel = async function(channelId, guildId = null) {
-  const config = await this.getConfig(guildId);
-  config.logsChannelId = channelId;
-  return await config.save();
+  // Atomic update for logsChannelId
+  return await this.findOneAndUpdate(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { $set: { logsChannelId: channelId } },
+    { new: true, upsert: true }
+  );
 };
 
 configSchema.statics.getLogsChannel = async function(guildId = null) {
-  const config = await this.getConfig(guildId);
-  return config.logsChannelId || null;
+  // Projection for logsChannelId only
+  const config = await this.findOne(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { logsChannelId: 1 }
+  ).lean();
+  return config?.logsChannelId || null;
 };
 
 configSchema.statics.setAppealsChannel = async function(channelId, guildId = null) {
-  const config = await this.getConfig(guildId);
-  config.appealsChannelId = channelId;
-  return await config.save();
+  // Atomic update for appealsChannelId
+  return await this.findOneAndUpdate(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { $set: { appealsChannelId: channelId } },
+    { new: true, upsert: true }
+  );
 };
 
 configSchema.statics.getAppealsChannel = async function(guildId = null) {
-  const config = await this.getConfig(guildId);
-  return config.appealsChannelId || null;
+  // Projection for appealsChannelId only
+  const config = await this.findOne(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { appealsChannelId: 1 }
+  ).lean();
+  return config?.appealsChannelId || null;
 };
 
 configSchema.statics.setAppealInvite = async function(inviteLink, guildId = null) {
-  const config = await this.getConfig(guildId);
-  config.appealInvite = inviteLink;
-  return await config.save();
+  // Atomic update for appealInvite
+  return await this.findOneAndUpdate(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { $set: { appealInvite: inviteLink } },
+    { new: true, upsert: true }
+  );
 };
 
 configSchema.statics.getAppealInvite = async function(guildId = null) {
-  const config = await this.getConfig(guildId);
-  return config.appealInvite || null;
+  // Projection for appealInvite only
+  const config = await this.findOne(
+    { configType: guildId ? 'guild' : 'global', guildId: guildId },
+    { appealInvite: 1 }
+  ).lean();
+  return config?.appealInvite || null;
 };
 
 configSchema.statics.canRoleUseCommand = function(config, roleId, command) {
@@ -635,5 +656,7 @@ configSchema.statics.getAutomodActionForWarnings = async function(warningCount) 
 };
 
 const Config = model('Config', configSchema);
+// Assign getConfigCached after Config is defined to avoid circular dependency
+Config.getConfigCached = getConfigCached;
 
 module.exports = Config;

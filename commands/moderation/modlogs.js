@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const permissionChecker = require('../../utils/permissionChecker');
-const ModerationActionModel = require('../../models/ModerationActionModel');
+const UserModel = require('../../models/UserModel');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -27,9 +27,8 @@ module.exports = {
 
       const targetUser = interaction.options.getUser('user') || interaction.user;
       const limit = interaction.options.getInteger('limit') || 10;
-      
-      
-      const userCases = await ModerationActionModel.getUserCases(targetUser.id);
+
+      const userCases = await UserModel.getCases(targetUser.id);
 
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)

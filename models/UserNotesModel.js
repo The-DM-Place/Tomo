@@ -19,14 +19,16 @@ const userNoteSchema = new Schema({
   },
   noteId: {
     type: String,
-    unique: true,
     default: () => Date.now().toString()
   }
 }, {
   timestamps: true
 });
 
-// Static methods
+// Indexes for fast lookups (only use schema.index, not index: true in fields)
+userNoteSchema.index({ userId: 1 });
+userNoteSchema.index({ noteId: 1 }, { unique: true });
+
 userNoteSchema.statics.addNote = async function(userId, moderatorId, note) {
   const noteData = {
     userId,
@@ -40,15 +42,18 @@ userNoteSchema.statics.addNote = async function(userId, moderatorId, note) {
 };
 
 userNoteSchema.statics.getUserNotes = async function(userId) {
-  return await this.find({ userId });
+  // Use .lean() for read-only queries
+  return await this.find({ userId }).lean();
 };
 
 userNoteSchema.statics.deleteNote = async function(noteId) {
-  return await this.deleteMany({ noteId: noteId });
+  // Atomic delete for unique noteId
+  return await this.deleteOne({ noteId: noteId });
 };
 
 userNoteSchema.statics.getAllNotes = async function() {
-  return await this.find();
+  // Use .lean() for read-only queries
+  return await this.find().lean();
 };
 
 const UserNote = model('UserNote', userNoteSchema);

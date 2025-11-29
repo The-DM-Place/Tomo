@@ -15,7 +15,7 @@ const warningsSchema = new Schema({
     },
     caseId: {
         type: String,
-        required: true,
+        required: true
     },
     timestamp: {
         type: Date,
@@ -25,9 +25,14 @@ const warningsSchema = new Schema({
     timestamps: true
 });
 
+// Indexes for fast lookups (only use schema.index, not index: true in fields)
+warningsSchema.index({ userId: 1 });
+warningsSchema.index({ caseId: 1 });
+
 // static methods
 warningsSchema.statics.getUserWarnings = async function(userId) {
-    return this.find({ userId });
+    // Use .lean() for read-only queries
+    return this.find({ userId }).lean();
 };
 
 warningsSchema.statics.addWarning = async function(userId, moderatorId, reason, caseId) {
@@ -35,17 +40,20 @@ warningsSchema.statics.addWarning = async function(userId, moderatorId, reason, 
         userId,
         moderatorId,
         reason,
-        caseId
+        caseId,
+        timestamp: new Date()
     });
-    return warning.save();
+    return await warning.save();
 };
 
 warningsSchema.statics.getWarningByCaseId = async function(caseId) {
-    return this.findOne({ caseId });
+    // Use .lean() for read-only queries
+    return this.findOne({ caseId }).lean();
 };
 
 warningsSchema.statics.removeWarning = async function(caseId) {
-    return this.deleteMany({ caseId });
+    // Atomic delete for unique caseId
+    return this.deleteOne({ caseId });
 };
 
 const Warnings = model('Warnings', warningsSchema);
