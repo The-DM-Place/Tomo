@@ -67,7 +67,6 @@ module.exports = {
         });
       }
 
-      // For large ban lists, fetch the ban directly by userId
       let isBanned = false;
       let banInfo = null;
       try {
