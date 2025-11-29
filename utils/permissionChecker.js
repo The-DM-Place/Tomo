@@ -13,11 +13,11 @@ class PermissionChecker {
 
       const result = await ConfigModel.checkCommandPermission(commandName, userRoles, isOwner);
 
-      logger.info(`Permission check for ${interaction.user.tag} on command ${commandName}:`, result);
+      console.log(`[INFO] Permission check for ${interaction.user.tag} on command ${commandName}:`, result);
 
       return result;
     } catch (error) {
-      logger.error('Error checking command permission:', error);
+      console.log('[ERROR] Error checking command permission:', error);
       return { allowed: false, reason: 'Permission check failed' };
     }
   }
@@ -85,7 +85,7 @@ class PermissionChecker {
         permission: await ConfigModel.checkCommandPermission(commandName, userRoles, isOwner)
       };
     } catch (error) {
-      logger.error('Error getting permission details:', error);
+      console.log('[ERROR] Error getting permission details:', error);
       return null;
     }
   }

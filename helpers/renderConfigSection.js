@@ -318,7 +318,7 @@ module.exports = async function renderConfigSection(section, interaction) {
     return { components };
 
   } catch (error) {
-    logger.error('Error rendering config section:', error);
+    console.log('[ERROR] Error rendering config section:', error);
     
     const container = new ContainerBuilder();
     container.addTextDisplayComponents(

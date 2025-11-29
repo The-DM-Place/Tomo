@@ -23,21 +23,21 @@ class ModerationLogger {
     try {
       const isLoggingEnabled = await ConfigModel.isLoggingEnabled();
       if (!isLoggingEnabled) {
-        logger.info('Moderation logging is disabled, skipping log');
+        console.log('[INFO] Moderation logging is disabled, skipping log');
         return false;
       }
 
       const logsChannelId = await ConfigModel.getLogsChannel();
       
       if (!logsChannelId) {
-        logger.info('No logs channel configured, skipping moderation log');
+        console.log('[INFO] No logs channel configured, skipping moderation log');
         return false;
       }
 
       const logsChannel = await client.channels.fetch(logsChannelId).catch(() => null);
       
       if (!logsChannel) {
-        logger.warn(`Logs channel ${logsChannelId} not found or inaccessible`);
+        console.log(`[WARN] Logs channel ${logsChannelId} not found or inaccessible`);
         return false;
       }
 
@@ -51,11 +51,11 @@ class ModerationLogger {
 
       await logsChannel.send({ embeds: [embed] });
       
-      logger.info(`Logged ${action.type} action by ${action.moderator.tag} on ${action.target.tag}`);
+      console.log(`[INFO] Logged ${action.type} action by ${action.moderator.tag} on ${action.target.tag}`);
       return true;
 
     } catch (error) {
-      logger.error('Error logging moderation action:', error);
+      console.log('[ERROR] Error logging moderation action:', error);
       return false;
     }
   }
@@ -185,14 +185,14 @@ class ModerationLogger {
       const logsChannelId = await ConfigModel.getLogsChannel();
       
       if (!logsChannelId) {
-        logger.info('No logs channel configured, skipping reason update log');
+        console.log('[INFO] No logs channel configured, skipping reason update log');
         return false;
       }
 
       const logsChannel = await client.channels.fetch(logsChannelId).catch(() => null);
       
       if (!logsChannel) {
-        logger.warn(`Logs channel ${logsChannelId} not found or inaccessible`);
+        console.log(`[WARN] Logs channel ${logsChannelId} not found or inaccessible`);
         return false;
       }
 
@@ -216,11 +216,11 @@ class ModerationLogger {
 
       await logsChannel.send({ embeds: [embed] });
       
-      logger.info(`Logged reason update for case ${caseId} by ${moderator.tag}`);
+      console.log(`[INFO] Logged reason update for case ${caseId} by ${moderator.tag}`);
       return true;
 
     } catch (error) {
-      logger.error('Error logging reason update:', error);
+      console.log('[ERROR] Error logging reason update:', error);
       return false;
     }
   }
