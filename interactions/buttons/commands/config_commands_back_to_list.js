@@ -6,10 +6,10 @@ module.exports = {
   async execute(interaction) {
     try {
       const config = await ConfigModel.getConfig();
-      
+
       const commands = Object.entries(config.commands);
       const itemsPerPage = 20;
-      
+
       if (commands.length === 0) {
         const embed = new EmbedBuilder()
           .setColor(0xFFB6C1)
@@ -27,7 +27,7 @@ module.exports = {
       const options = firstPageCommands.map(([cmd, data]) => ({
         label: cmd,
         value: cmd,
-        description: `${data.enabled !== false ? '✅' : '❌'} ${data.public ? 'Public' : 'Private'} • Click to manage`,
+        description: `${data.enabled !== false ? '✅' : '❌'} ${data.isPublic ? 'Public' : 'Private'} • Click to manage`,
         emoji: data.enabled !== false ? '🟢' : '🔴'
       }));
 
@@ -52,7 +52,7 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(totalPages === 1)
         );
-        
+
         components.push(navigationButtons);
       }
 
@@ -69,7 +69,7 @@ module.exports = {
 
     } catch (error) {
       console.error('Error in config_commands_back_to_list:', error);
-      
+
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Error')

@@ -1,6 +1,6 @@
 {
   "name": "tomo-bot",
-  "version": "0.1.0-alpha",
+  "version": "1.2.0",
   "description": "🌸 Tomo - A comprehensive yet cute Discord moderation bot with pink aesthetic, built with discord.js v14.",
   "main": "index.js",
   "scripts": {

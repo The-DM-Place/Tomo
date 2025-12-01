@@ -6,24 +6,24 @@ module.exports = {
   async execute(interaction) {
     try {
       const config = await ConfigModel.getConfig();
-      
+
       const commands = Object.entries(config.commands);
       const itemsPerPage = 20;
       const totalPages = Math.ceil(commands.length / itemsPerPage);
-      
+
       const currentEmbed = interaction.message.embeds[0];
       const currentPageMatch = currentEmbed.description.match(/Page (\d+) of/);
       const currentPage = currentPageMatch ? parseInt(currentPageMatch[1]) : 1;
       const newPage = Math.min(totalPages, currentPage + 1);
-      
+
       const startIndex = (newPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const pageCommands = commands.slice(startIndex, endIndex);
-      
+
       const options = pageCommands.map(([cmd, data]) => ({
         label: cmd,
         value: cmd,
-        description: `${data.enabled !== false ? '✅' : '❌'} ${data.public ? 'Public' : 'Private'} • Click to manage`,
+        description: `${data.enabled !== false ? '✅' : '❌'} ${data.isPublic ? 'Public' : 'Private'} • Click to manage`,
         emoji: data.enabled !== false ? '🟢' : '🔴'
       }));
 
@@ -47,7 +47,7 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(newPage === totalPages)
         );
-        
+
         components.push(navigationButtons);
       }
 

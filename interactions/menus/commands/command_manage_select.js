@@ -5,10 +5,11 @@ module.exports = {
   customId: 'command_manage_select',
   async execute(interaction) {
     try {
+
       const config = await ConfigModel.getConfig();
       const commandName = interaction.values[0];
       const commandData = config.commands[commandName];
-      
+
       if (!commandData) {
         return await interaction.reply({
           content: `Command \`${commandName}\` not found! Use **Refresh Commands** to rescan.`,
@@ -16,27 +17,39 @@ module.exports = {
         });
       }
 
-      const statusInfo = commandData.enabled !== false ? 
-        { text: 'Enabled', emoji: '🟢', color: 0x98FB98 } : 
+      const guildRoles = interaction.guild.roles.cache;
+
+      const whitelistRoleIdsRaw = await ConfigModel.getCommandWhitelist(commandName);
+      let whitelistRoleIds = [];
+      if (Array.isArray(whitelistRoleIdsRaw)) {
+        whitelistRoleIds = whitelistRoleIdsRaw;
+      } else if (typeof whitelistRoleIdsRaw === 'string' && whitelistRoleIdsRaw.length > 0) {
+        whitelistRoleIds = [whitelistRoleIdsRaw];
+      }
+      const whitelistRoles = whitelistRoleIds.filter(roleId => guildRoles.has(roleId));
+      const blacklistRoles = (commandData.blacklist || []).filter(roleId => guildRoles.has(roleId));
+
+      const statusInfo = commandData.enabled !== false ?
+        { text: 'Enabled', emoji: '🟢', color: 0x98FB98 } :
         { text: 'Disabled', emoji: '🔴', color: 0xFFB6C1 };
 
-      const visibilityInfo = commandData.public ? 
-        { text: 'Public', emoji: '🌍' } : 
+      const visibilityInfo = commandData.isPublic ?
+        { text: 'Public', emoji: '🌍' } :
         { text: 'Private', emoji: '🔒' };
 
       let description = `**Status:** ${statusInfo.emoji} ${statusInfo.text}\n`;
       description += `**Visibility:** ${visibilityInfo.emoji} ${visibilityInfo.text}\n\n`;
-      
+
       if (commandData.description) {
         description += `**Description:** ${commandData.description}\n\n`;
       }
-      
-      if (commandData.whitelist && commandData.whitelist.length > 0) {
-        description += `**Whitelisted Roles:** ${commandData.whitelist.length} role(s)\n`;
+
+      if (whitelistRoles.length > 0) {
+        description += `**Whitelisted Roles:** ${whitelistRoles.length} role(s)\n`;
       }
-      
-      if (commandData.blacklist && commandData.blacklist.length > 0) {
-        description += `**Blacklisted Roles:** ${commandData.blacklist.length} role(s)\n`;
+
+      if (blacklistRoles.length > 0) {
+        description += `**Blacklisted Roles:** ${blacklistRoles.length} role(s)\n`;
       }
 
       const embed = new EmbedBuilder()
@@ -53,9 +66,9 @@ module.exports = {
 
       const publicButton = new ButtonBuilder()
         .setCustomId(`command_toggle_public_${commandName}`)
-        .setLabel(commandData.public ? 'Make Private' : 'Make Public')
-        .setStyle(commandData.public ? ButtonStyle.Secondary : ButtonStyle.Primary)
-        .setEmoji(commandData.public ? '🔒' : '🌍');
+        .setLabel(commandData.isPublic ? 'Make Private' : 'Make Public')
+        .setStyle(commandData.isPublic ? ButtonStyle.Secondary : ButtonStyle.Primary)
+        .setEmoji(commandData.isPublic ? '🔒' : '🌍');
 
       const whitelistButton = new ButtonBuilder()
         .setCustomId(`command_whitelist_manage_${commandName}`)
@@ -84,7 +97,7 @@ module.exports = {
 
     } catch (error) {
       console.error('Error in command_manage_select:', error);
-      
+
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Error')

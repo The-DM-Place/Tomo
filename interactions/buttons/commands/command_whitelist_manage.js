@@ -1,4 +1,4 @@
-const { ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const ConfigModel = require('../../../models/ConfigModel');
 
 module.exports = {
@@ -7,9 +7,9 @@ module.exports = {
     try {
       const match = interaction.customId.match(/^command_whitelist_manage_(.+)$/);
       if (!match) {
-        return await interaction.reply({ 
-          content: 'Invalid command identifier!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'Invalid command identifier!',
+          ephemeral: true
         });
       }
 
@@ -18,17 +18,23 @@ module.exports = {
       const commandData = config.commands[commandName];
 
       if (!commandData) {
-        return await interaction.reply({ 
-          content: `Command "${commandName}" not found!`, 
-          ephemeral: true 
+        return await interaction.reply({
+          content: `Command "${commandName}" not found!`,
+          ephemeral: true
         });
       }
 
-      const whitelistedRoles = commandData.whitelist || [];
+      const whitelistRoleIdsRaw = await ConfigModel.getCommandWhitelist(commandName);
+      let whitelistedRoles = [];
+      if (Array.isArray(whitelistRoleIdsRaw)) {
+        whitelistedRoles = whitelistRoleIdsRaw;
+      } else if (typeof whitelistRoleIdsRaw === 'string' && whitelistRoleIdsRaw.length > 0) {
+        whitelistedRoles = [whitelistRoleIdsRaw];
+      }
       const guild = interaction.guild;
-      
+
       let description = `**Whitelist Management for \`${commandName}\`**\n\n`;
-      
+
       if (whitelistedRoles.length === 0) {
         description += '🔓 **No roles whitelisted** - Command follows general permissions\n\n';
       } else {
@@ -39,7 +45,7 @@ module.exports = {
         }
         description += '\n';
       }
-      
+
       description += 'Use the buttons below to manage whitelist access:';
 
       const embed = new EmbedBuilder()
@@ -75,7 +81,7 @@ module.exports = {
 
     } catch (error) {
       console.error('Error in command_whitelist_manage:', error);
-      
+
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Error')

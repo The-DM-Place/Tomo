@@ -1,4 +1,9 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  MessageFlags
+} = require('discord.js');
+
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
@@ -7,168 +12,140 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('mute')
     .setDescription('Timeout a user in the server')
-    .addUserOption(option =>
-      option.setName('user')
+    .addUserOption(opt =>
+      opt.setName('user')
         .setDescription('The user to timeout')
         .setRequired(true))
-    .addStringOption(option =>
-      option.setName('duration')
-        .setDescription('Duration of the timeout (e.g., 1m, 30m, 2h, 1d, 1w)')
+    .addStringOption(opt =>
+      opt.setName('duration')
+        .setDescription('Duration (1m, 30m, 2h, 1d, 1w)')
         .setRequired(true))
-    .addStringOption(option =>
-      option.setName('reason')
-        .setDescription('Reason for the timeout')
-        .setRequired(false)),
+    .addStringOption(opt =>
+      opt.setName('reason')
+        .setDescription('Reason for the timeout')),
   isPublic: false,
 
   async execute(interaction) {
-    const hasPermission = await permissionChecker.requirePermission(interaction, 'mute');
-    if (!hasPermission) return;
+    if (!(await permissionChecker.requirePermission(interaction, 'mute'))) return;
+
+    await interaction.deferReply();
 
     try {
       const targetUser = interaction.options.getUser('user');
-      const duration = interaction.options.getString('duration');
       const reason = interaction.options.getString('reason') || 'No reason provided';
+      const duration = interaction.options.getString('duration');
+      const moderator = interaction.member;
 
-      if (targetUser.id === interaction.user.id) {
-        const embed = new EmbedBuilder()
+      const targetMember =
+        interaction.options.getMember('user')
+        || await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+
+      const errorEmbed = (title, desc) =>
+        new EmbedBuilder()
           .setColor(0xFFB6C1)
-          .setTitle('🌸 Oops!')
-          .setDescription('You cannot mute yourself, silly! 💕')
-          .setFooter({ text: 'That would be quite inconvenient! 💖' });
+          .setTitle(title)
+          .setDescription(desc)
+          .setFooter({ text: 'Action blocked 🔒' });
 
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
+      if (targetUser.id === interaction.user.id)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '🌸 Oops!',
+            'You cannot mute yourself, silly! 💕'
+          )]
+        });
+
+      if (targetUser.id === interaction.client.user.id)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '🌸 That’s not very nice!',
+            'I cannot mute myself! 💔'
+          )]
+        });
+
+      if (!targetMember)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '❌ User Not Found',
+            'This user is not in the server! 💔'
+          )]
+        });
+
+      if (targetMember.id === interaction.guild.ownerId)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '👑 Ultimate Power!',
+            'Cannot mute the server owner! ✨'
+          )]
+        });
+
+      if (
+        targetMember.roles.highest.position >= moderator.roles.highest.position &&
+        interaction.user.id !== interaction.guild.ownerId
+      )
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '👑 Role Hierarchy',
+            'You cannot mute someone with equal or higher roles than you!'
+          )]
+        });
+
+      const bot = interaction.guild.members.me;
+
+      if (!bot.permissions.has('ModerateMembers')) {
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '❌ Missing Permissions',
+            'I need the **Moderate Members** permission to mute users. Please update my role permissions.'
+          )]
         });
       }
 
-      if (targetUser.id === interaction.client.user.id) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🌸 That\'s not very nice!')
-          .setDescription('I cannot mute myself! How would I help you then? 💔')
-          .setFooter({ text: 'We\'re supposed to be friends! 🥺' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
+      if (targetMember.roles.highest.position >= bot.roles.highest.position) {
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '🥺 Role Hierarchy Issue',
+            'I cannot mute this user because their role is higher than or equal to mine. Please adjust my role position.'
+          )]
         });
       }
 
-      const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-      
-      if (!targetMember) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('❌ User Not Found')
-          .setDescription('This user is not in the server! 💔')
-          .setFooter({ text: 'Maybe they left already? 🥺' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      // skill issue?
-      if (targetMember.id === interaction.guild.ownerId) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('👑 Ultimate Power!')
-          .setDescription('Cannot mute the server owner! They have ultimate power~ ✨')
-          .setFooter({ text: 'They literally own this place! 💫' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      const moderatorMember = interaction.member;
-      if (targetMember.roles.highest.position >= moderatorMember.roles.highest.position && 
-          interaction.user.id !== interaction.guild.ownerId) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('👑 Role Hierarchy')
-          .setDescription('You cannot mute someone with equal or higher roles than you!')
-          .setFooter({ text: 'Respect the hierarchy! ✊' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      const botMember = interaction.guild.members.me;
-      if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🥺 I Need Higher Permissions!')
-          .setDescription('I cannot mute someone with equal or higher roles than me! Please move my role higher~')
-          .setFooter({ text: 'Help me help you! 💪' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      if (targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date()) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🔇 Already Muted!')
-          .setDescription(`**${targetUser.tag}** is already timed out!`)
-          .addFields({
-            name: '⏰ Expires',
-            value: `<t:${Math.floor(targetMember.communicationDisabledUntil.getTime() / 1000)}:R>`,
-            inline: true
-          })
-          .setFooter({ text: 'They\'re already quiet! 🤫' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
+      if (targetMember.communicationDisabledUntil > new Date()) {
+        const until = Math.floor(targetMember.communicationDisabledUntil / 1000);
+        return interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFFB6C1)
+              .setTitle('🔇 Already Muted!')
+              .setDescription(`${targetUser.tag} is already timed out!`)
+              .addFields({ name: 'Expires', value: `<t:${until}:R>` })
+          ]
         });
       }
 
       const durationMs = parseDuration(duration);
-      if (!durationMs) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('❌ Invalid Duration')
-          .setDescription('Invalid duration format! Please use formats like:\n`1m` (1 minute), `30m` (30 minutes), `2h` (2 hours), `1d` (1 day), `1w` (1 week)')
-          .setFooter({ text: 'Examples: 5m, 1h, 2d, 1w 💖' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
+      if (!durationMs)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '❌ Invalid Duration',
+            'Use formats like `1m`, `30m`, `2h`, `1d`, `1w`'
+          )]
         });
-      }
 
-      // discord said no :(
-      const maxDuration = 28 * 24 * 60 * 60 * 1000;
-      if (durationMs > maxDuration) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('⏰ Duration Too Long!')
-          .setDescription('Discord timeouts can only last up to 28 days maximum!')
-          .setFooter({ text: 'That\'s Discord\'s rule, not mine! 🤷‍♀️' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
+      if (durationMs > 28 * 24 * 60 * 60 * 1000)
+        return interaction.editReply({
+          embeds: [errorEmbed(
+            '⏰ Duration Too Long!',
+            'Discord timeouts can only last up to **28 days**!'
+          )]
         });
-      }
-
-      await interaction.deferReply();
 
       const dbAction = await ModerationActionModel.logAction({
         type: 'mute',
         userId: targetUser.id,
         moderatorId: interaction.user.id,
-        reason: reason,
-        duration: duration
+        reason,
+        duration
       });
 
       const dmEmbed = new EmbedBuilder()
@@ -176,33 +153,13 @@ module.exports = {
         .setTitle('🔇 You have been muted')
         .setDescription(`You have been timed out in **${interaction.guild.name}**`)
         .addFields(
-          {
-            name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
-          },
-          {
-            name: '⏰ Duration',
-            value: `\`${duration}\``,
-            inline: true
-          },
-          {
-            name: '📋 Case ID',
-            value: `\`${dbAction.caseId}\``,
-            inline: true
-          }
+          { name: 'Reason', value: `\`${reason}\`` },
+          { name: 'Duration', value: `\`${duration}\`` },
+          { name: 'Case ID', value: `\`${dbAction.caseId}\`` }
         )
-        .setFooter({ 
-          text: 'You will be able to chat again when the timeout expires',
-          iconURL: interaction.guild.iconURL() 
-        })
         .setTimestamp();
 
-      try {
-        await targetUser.send({ embeds: [dmEmbed] });
-      } catch (dmError) {
-        console.log(`Could not DM user ${targetUser.tag} about their mute:`, dmError.message);
-      }
+      targetUser.send({ embeds: [dmEmbed] }).catch(() => { });
 
       await targetMember.timeout(durationMs, `${reason} | Muted by: ${interaction.user.tag}`);
 
@@ -210,61 +167,44 @@ module.exports = {
         type: 'mute',
         moderator: interaction.user,
         target: targetUser,
-        reason: reason,
-        duration: duration,
+        reason,
+        duration,
         caseId: dbAction.caseId
       });
 
-      const expiryTime = new Date(Date.now() + durationMs);
-
-      const successEmbed = new EmbedBuilder()
-        .setColor(0xFFB6C1)
-        .setDescription(`🔨 **${targetUser.tag} was muted** | ${reason}`)
-        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
-        .setTimestamp();
-
-      await interaction.editReply({
-        embeds: [successEmbed]
+      return interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFFB6C1)
+            .setDescription(`🔇 **${targetUser.tag} has been muted** | ${reason}`)
+            .setFooter({ text: `Case ID: ${dbAction.caseId}` })
+            .setTimestamp()
+        ]
       });
 
-    } catch (error) {
-      console.error('Error in mute command:', error);
-      
-      const errorEmbed = new EmbedBuilder()
+    } catch (err) {
+      console.error('Mute command error:', err);
+
+      const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Mute Failed')
-        .setFooter({ text: 'Please try again or contact support! 💔' })
+        .setDescription('An unexpected error occurred. Please try again.')
         .setTimestamp();
 
-      if (error.code === 10007) {
-        errorEmbed.setDescription('User not found! They might have already left the server~');
-      } else if (error.code === 50013) {
-        errorEmbed.setDescription('I don\'t have permission to timeout this user! Please check my permissions~');
-      } else {
-        errorEmbed.setDescription('An error occurred while trying to mute the user! Please try again~');
-      }
-
-      if (interaction.deferred) {
-        await interaction.editReply({ embeds: [errorEmbed] });
-      } else {
-        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-      }
+      return interaction.editReply({ embeds: [embed] });
     }
-  },
+  }
 };
 
-function parseDuration(duration) {
-  const match = duration.match(/^(\d+)([mhdw])$/);
-  if (!match) return null;
+function parseDuration(str) {
+  const m = str.match(/^(\d+)([mhdw])$/);
+  if (!m) return null;
 
-  const amount = parseInt(match[1]);
-  const unit = match[2];
-
-  switch (unit) {
-    case 'm': return amount * 60 * 1000;
-    case 'h': return amount * 60 * 60 * 1000;
-    case 'd': return amount * 24 * 60 * 60 * 1000;
-    case 'w': return amount * 7 * 24 * 60 * 60 * 1000;
-    default: return null;
-  }
+  const num = Number(m[1]);
+  return {
+    m: num * 60_000,
+    h: num * 3_600_000,
+    d: num * 86_400_000,
+    w: num * 604_800_000
+  }[m[2]];
 }

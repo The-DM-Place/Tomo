@@ -6,24 +6,24 @@ module.exports = {
   async execute(interaction) {
     try {
       if (!interaction.guild) {
-        return await interaction.reply({ 
-          content: 'This command can only be used in a server!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'This command can only be used in a server!',
+          ephemeral: true
         });
       }
 
       if (!interaction.values || interaction.values.length === 0) {
-        return await interaction.reply({ 
-          content: 'No roles were selected!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'No roles were selected!',
+          ephemeral: true
         });
       }
 
       const match = interaction.customId.match(/^command_whitelist_remove_menu_(.+)$/);
       if (!match) {
-        return await interaction.reply({ 
-          content: 'Invalid command identifier!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'Invalid command identifier!',
+          ephemeral: true
         });
       }
 
@@ -31,9 +31,25 @@ module.exports = {
       let successCount = 0;
       let failed = [];
 
+      const config = await ConfigModel.getConfig();
+      if (!config.commands[commandName]) {
+        return await interaction.reply({
+          content: `Command \`${commandName}\` does not exist in the configuration.`,
+          ephemeral: true
+        });
+      }
+
+      if (!Array.isArray(config.commands[commandName].whitelist)) {
+        config.commands[commandName].whitelist = [];
+      }
+
       for (const roleId of interaction.values) {
         try {
-          await ConfigModel.removeCommandWhitelistRole(commandName, roleId);
+          await ConfigModel.updateConfig({
+            $pull: {
+              [`commands.${commandName}.whitelist`]: roleId
+            }
+          });
           successCount++;
           logger.info(`Removed role ${roleId} from whitelist for command ${commandName} by ${interaction.user.tag}`);
         } catch (error) {
@@ -50,25 +66,25 @@ module.exports = {
         responseMessage += ` ${failed.length} role(s) failed to remove.`;
       }
 
-      await interaction.reply({ 
-        content: responseMessage, 
-        ephemeral: true 
+      await interaction.reply({
+        content: responseMessage,
+        ephemeral: true
       });
 
     } catch (error) {
       logger.error('Error in command_whitelist_remove_menu:', error);
-      
+
       const errorMessage = 'An error occurred while removing roles from whitelist. Please try again.';
-      
+
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.followUp({
+          content: errorMessage,
+          ephemeral: true
         });
       } else {
-        await interaction.reply({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.reply({
+          content: errorMessage,
+          ephemeral: true
         });
       }
     }
