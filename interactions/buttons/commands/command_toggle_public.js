@@ -32,7 +32,8 @@ module.exports = {
         });
       }
 
-      const currentPublicStatus = command.public === true;
+
+      const currentPublicStatus = command.isPublic === true;
       const newPublicStatus = !currentPublicStatus;
 
       await ConfigModel.setCommandPublic(commandName, newPublicStatus);
@@ -46,7 +47,7 @@ module.exports = {
         { text: 'Enabled', emoji: '🟢', color: 0x98FB98 } :
         { text: 'Disabled', emoji: '🔴', color: 0xFFB6C1 };
 
-      const visibilityInfo = commandData.public ?
+      const visibilityInfo = commandData.isPublic ?
         { text: 'Public', emoji: '🌍' } :
         { text: 'Private', emoji: '🔒' };
 
@@ -57,8 +58,15 @@ module.exports = {
         description += `**Description:** ${commandData.description}\n\n`;
       }
 
-      if (commandData.whitelist && commandData.whitelist.length > 0) {
-        description += `**Whitelisted Roles:** ${commandData.whitelist.length} role(s)\n`;
+      const whitelistRoleIdsRaw = await ConfigModel.getCommandWhitelist(commandName);
+      let whitelistedRoles = [];
+      if (Array.isArray(whitelistRoleIdsRaw)) {
+        whitelistedRoles = whitelistRoleIdsRaw;
+      } else if (typeof whitelistRoleIdsRaw === 'string' && whitelistRoleIdsRaw.length > 0) {
+        whitelistedRoles = [whitelistRoleIdsRaw];
+      }
+      if (whitelistedRoles.length > 0) {
+        description += `**Whitelisted Roles:** ${whitelistedRoles.length} role(s)\n`;
       }
 
       if (commandData.blacklist && commandData.blacklist.length > 0) {
@@ -79,9 +87,9 @@ module.exports = {
 
       const publicButton = new ButtonBuilder()
         .setCustomId(`command_toggle_public_${commandName}`)
-        .setLabel(commandData.public ? 'Make Private' : 'Make Public')
-        .setStyle(commandData.public ? ButtonStyle.Secondary : ButtonStyle.Primary)
-        .setEmoji(commandData.public ? '🔒' : '🌍');
+        .setLabel(commandData.isPublic ? 'Make Private' : 'Make Public')
+        .setStyle(commandData.isPublic ? ButtonStyle.Secondary : ButtonStyle.Primary)
+        .setEmoji(commandData.isPublic ? '🔒' : '🌍');
 
       const whitelistButton = new ButtonBuilder()
         .setCustomId(`command_whitelist_manage_${commandName}`)

@@ -2,6 +2,15 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const permissionChecker = require('../../utils/permissionChecker');
 const UserModel = require('../../models/UserModel');
 
+const ACTION_EMOJIS = {
+  mute: '🔇',
+  ban: '🔨',
+  kick: '👢',
+  warn: '⚠️',
+  unban: '🔓',
+  unmute: '🔊'
+};
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('modlogs')
@@ -9,18 +18,17 @@ module.exports = {
     .addUserOption(option =>
       option.setName('user')
         .setDescription('View case history for a specific user (defaults to yourself)')
-        .setRequired(false))
+    )
     .addIntegerOption(option =>
       option.setName('limit')
-        .setDescription('Number of cases to show (1-20, default: 10)')
+        .setDescription('Number of cases to show (1-20)')
         .setMinValue(1)
         .setMaxValue(20)
-        .setRequired(false)),
+    ),
   isPublic: false,
 
   async execute(interaction) {
-    const hasPermission = await permissionChecker.requirePermission(interaction, 'modlogs');
-    if (!hasPermission) return;
+    if (!(await permissionChecker.requirePermission(interaction, 'modlogs'))) return;
 
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -28,119 +36,84 @@ module.exports = {
       const targetUser = interaction.options.getUser('user') || interaction.user;
       const limit = interaction.options.getInteger('limit') || 10;
 
-      const userCases = await UserModel.getCases(targetUser.id);
+      const userCases = await UserModel.getCases(targetUser.id, limit);
 
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('📋 Moderation Case History')
         .setDescription(`**User:** ${targetUser.tag} (<@${targetUser.id}>)\n**User ID:** ${targetUser.id}`)
         .setThumbnail(targetUser.displayAvatarURL())
-        .setTimestamp()
-        .setFooter({ 
-          text: `Requested by ${interaction.user.tag} • ${userCases.length} total cases 💖`,
-          iconURL: interaction.user.displayAvatarURL()
-        });
+        .setTimestamp();
 
       if (!userCases || userCases.length === 0) {
-        embed.setDescription(`**${targetUser.tag}** has no moderation history! ✨`)
-          .addFields({
-            name: '💡 Clean Record',
-            value: 'This user has never been warned, muted, banned, or kicked.',
-            inline: false
-          });
+        embed.addFields({
+          name: '💡 Clean Record',
+          value: `${targetUser.tag} has no moderation history! ✨`
+        });
 
-        return await interaction.editReply({ embeds: [embed] });
+        return interaction.editReply({ embeds: [embed] });
       }
 
-      userCases.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const moderatorIds = [...new Set(userCases.map(c => c.moderatorId))];
 
-      const casesToShow = userCases.slice(0, limit);
+      const moderatorMap = {};
+      await Promise.all(
+        moderatorIds.map(id =>
+          interaction.client.users.fetch(id)
+            .then(user => moderatorMap[id] = user.tag)
+            .catch(() => moderatorMap[id] = `Unknown (ID: ${id})`)
+        )
+      );
 
-      const caseTypes = {};
-      userCases.forEach(c => {
-        const type = c.type.toLowerCase();
-        caseTypes[type] = (caseTypes[type] || 0) + 1;
-      });
+      const caseSummary = userCases.reduce((acc, c) => {
+        const t = c.type.toLowerCase();
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+      }, {});
 
-      const summaryText = Object.entries(caseTypes)
+      const summaryText = Object.entries(caseSummary)
         .map(([type, count]) => {
-          const emoji = {
-            mute: '🔇',
-            ban: '🔨',
-            kick: '👢',
-            warn: '⚠️',
-            unban: '🔓',
-            unmute: '🔊'
-          }[type] || '📋';
-          const typeName = type.charAt(0).toUpperCase() + type.slice(1);
-          return `${emoji} ${typeName}s: **${count}**`;
+          const emoji = ACTION_EMOJIS[type] || '📋';
+          const name = type[0].toUpperCase() + type.slice(1);
+          return `${emoji} ${name}s: **${count}**`;
         })
         .join(' • ');
 
       embed.addFields({
         name: '📊 Case Summary',
-        value: summaryText,
-        inline: false
+        value: summaryText
       });
 
-      for (const caseData of casesToShow) {
-        const date = new Date(caseData.timestamp);
-        const timestamp = `<t:${Math.floor(date.getTime() / 1000)}:F>`;
-        const relativeTime = `<t:${Math.floor(date.getTime() / 1000)}:R>`;
-        
-        let moderatorInfo = 'Unknown';
-        try {
-          const moderator = await interaction.client.users.fetch(caseData.moderatorId);
-          moderatorInfo = `${moderator.tag}`;
-        } catch (error) {
-          moderatorInfo = `Unknown (ID: ${caseData.moderatorId})`;
-        }
+      for (const c of userCases.slice(0, limit)) {
+        const ts = Math.floor(new Date(c.timestamp).getTime() / 1000);
+        const moderatorName = moderatorMap[c.moderatorId];
+        const emoji = ACTION_EMOJIS[c.type.toLowerCase()] || '📋';
 
-        const actionEmoji = {
-          mute: '🔇',
-          ban: '🔨',
-          kick: '👢',
-          warn: '⚠️',
-          unban: '🔓',
-          unmute: '🔊'
-        }[caseData.type.toLowerCase()] || '📋';
-
-        const fieldValue = [
-          `**Type:** ${actionEmoji} ${caseData.type}`,
-          `**Moderator:** ${moderatorInfo}`,
-          `**Reason:** ${caseData.reason}`,
-          `**Date:** ${timestamp} (${relativeTime})`
+        const lines = [
+          `**Type:** ${emoji} ${c.type}`,
+          `**Moderator:** ${moderatorName}`,
+          `**Reason:** ${c.reason}`,
+          `**Date:** <t:${ts}:F> (<t:${ts}:R>)`
         ];
 
-        if (caseData.duration) {
-          fieldValue.splice(3, 0, `**Duration:** ${caseData.duration}`);
+        if (c.duration) {
+          lines.splice(3, 0, `**Duration:** ${c.duration}`);
         }
 
         embed.addFields({
-          name: `📋 Case ${caseData.caseId}`,
-          value: fieldValue.join('\n'),
-          inline: false
-        });
-      }
-
-      if (userCases.length > limit) {
-        embed.addFields({
-          name: '📄 Pagination',
-          value: `Showing ${limit} of ${userCases.length} total cases. Use \`/modlogs user:${targetUser.tag} limit:${Math.min(userCases.length, 20)}\` to see more.`,
-          inline: false
+          name: `📋 Case ${c.caseId}`,
+          value: lines.join('\n')
         });
       }
 
       await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
-      console.error('Error in modlogs command:', error);
-      
+      console.error('modlogs error:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Case History Error')
-        .setDescription('An error occurred while fetching case history. Please try again.')
-        .setFooter({ text: 'Contact an administrator if this persists 💔' })
+        .setDescription('Something went wrong while fetching case history.')
         .setTimestamp();
 
       if (interaction.deferred) {
@@ -149,5 +122,5 @@ module.exports = {
         await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
-  },
+  }
 };

@@ -2,6 +2,27 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const permissionChecker = require('../../utils/permissionChecker');
 const ModerationActionModel = require('../../models/ModerationActionModel');
 
+const ACTION_EMOJIS = {
+  mute: '🔇',
+  ban: '🔨',
+  kick: '👢',
+  warn: '⚠️',
+  unban: '🔓',
+  unmute: '🔊',
+  total: '📈'
+};
+
+function formatStat(actionType, data) {
+  const emoji = ACTION_EMOJIS[actionType] || '📋';
+  const name = actionType.charAt(0).toUpperCase() + actionType.slice(1);
+
+  return {
+    name: `${emoji} ${name}${actionType === 'total' ? '' : 's'}`,
+    value: `**Last 7 days:** ${data.last7}\n**Last 30 days:** ${data.last30}\n**All time:** ${data.allTime}`,
+    inline: true
+  };
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('modstats')
@@ -9,7 +30,7 @@ module.exports = {
     .addUserOption(option =>
       option.setName('moderator')
         .setDescription('View statistics for a specific moderator (defaults to yourself)')
-        .setRequired(false)),
+    ),
   isPublic: false,
 
   async execute(interaction) {
@@ -20,111 +41,90 @@ module.exports = {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const targetModerator = interaction.options.getUser('moderator') || interaction.user;
-      
+
       const stats = await ModerationActionModel.getModeratorStatistics(targetModerator.id);
-      const title = `📊 Moderation Statistics`;
-      const description = `**Moderator:** ${targetModerator.tag} (<@${targetModerator.id}>)\n**User ID:** ${targetModerator.id}`;
 
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle(title)
-        .setDescription(description)
+        .setTitle('📊 Moderation Statistics')
+        .setDescription(`**Moderator:** ${targetModerator.tag} (<@${targetModerator.id}>)\n**User ID:** ${targetModerator.id}`)
         .setThumbnail(targetModerator.displayAvatarURL())
         .setTimestamp()
-        .setFooter({ 
+        .setFooter({
           text: `Requested by ${interaction.user.tag} • Statistics as of now 💖`,
           iconURL: interaction.user.displayAvatarURL()
         });
 
-      const formatStat = (actionType, data) => {
-        const emoji = {
-          mute: '🔇',
-          ban: '🔨',
-          kick: '👢',
-          warn: '⚠️',
-          unban: '🔓',
-          unmute: '🔊',
-          total: '📈'
-        }[actionType] || '📋';
-
-        const name = actionType.charAt(0).toUpperCase() + actionType.slice(1);
-        
-        return {
-          name: `${emoji} ${name}${actionType === 'total' ? '' : 's'}`,
-          value: `**Last 7 days:** ${data.last7}\n**Last 30 days:** ${data.last30}\n**All time:** ${data.allTime}`,
-          inline: true
-        };
-      };
-
-      if (stats.total.allTime === 0) {
-        const noStatsEmbed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('📊 Moderation Statistics')
-          .setDescription(`**${targetModerator.tag}** hasn't performed any moderation actions yet! 🌸`)
+      if (!stats || stats.total.allTime === 0) {
+        embed.setDescription(`**${targetModerator.tag}** hasn't performed any moderation actions yet! 🌸`)
           .addFields({
             name: '💡 Info',
             value: 'Statistics will appear here once moderation commands are used.',
             inline: false
           })
-          .setThumbnail(targetModerator.displayAvatarURL())
-          .setFooter({ 
+          .setFooter({
             text: `Requested by ${interaction.user.tag} • Clean slate! 💖`,
             iconURL: interaction.user.displayAvatarURL()
-          })
-          .setTimestamp();
+          });
 
-        return await interaction.editReply({ embeds: [noStatsEmbed] });
+        return interaction.editReply({ embeds: [embed] });
       }
 
-      const actionTypes = ['mute', 'ban', 'kick', 'warn'];
-      
-      actionTypes.forEach(type => {
+      const mainTypes = ['mute', 'ban', 'kick', 'warn'];
+      for (const type of mainTypes) {
         if (stats[type]) {
           embed.addFields(formatStat(type, stats[type]));
         }
-      });
-
-      if (stats.unban && (stats.unban.allTime > 0 || stats.unban.last30 > 0 || stats.unban.last7 > 0)) {
-        embed.addFields(formatStat('unban', stats.unban));
       }
 
-      if (stats.unmute && (stats.unmute.allTime > 0 || stats.unmute.last30 > 0 || stats.unmute.last7 > 0)) {
-        embed.addFields(formatStat('unmute', stats.unmute));
+      const optionalTypes = ['unban', 'unmute'];
+      for (const type of optionalTypes) {
+        const data = stats[type];
+        if (data && (data.allTime || data.last30 || data.last7)) {
+          embed.addFields(formatStat(type, data));
+        }
       }
 
       embed.addFields(formatStat('total', stats.total));
 
       const recentActivity = stats.total.last7;
       const olderActivity = stats.total.last30 - stats.total.last7;
-      const mostActiveText = recentActivity > olderActivity ? 'Last 7 days' : 
-                            olderActivity > recentActivity ? 'Previous 23 days' : 'Consistent activity';
+      const mostActiveText =
+        recentActivity > olderActivity
+          ? 'Last 7 days'
+          : olderActivity > recentActivity
+          ? 'Previous 23 days'
+          : 'Consistent activity';
 
-      const actionsByType = Object.entries(stats)
-        .filter(([key]) => key !== 'total')
-        .filter(([, data]) => data.allTime > 0)
-        .sort(([,a], [,b]) => b.allTime - a.allTime);
+      let primaryAction = 'None';
+      let primaryCount = 0;
 
-      const primaryAction = actionsByType.length > 0 ? 
-        actionsByType[0][0].charAt(0).toUpperCase() + actionsByType[0][0].slice(1) : 'None';
+      for (const [key, data] of Object.entries(stats)) {
+        if (key === 'total') continue;
+        if (!data || data.allTime <= 0) continue;
 
-      const summaryText = [
+        if (data.allTime > primaryCount) {
+          primaryCount = data.allTime;
+          primaryAction = key.charAt(0).toUpperCase() + key.slice(1);
+        }
+      }
+
+      const summaryLines = [
         `**Most active period:** ${mostActiveText}`,
-        `**Primary action:** ${primaryAction}${actionsByType.length > 0 ? `s (${actionsByType[0][1].allTime})` : ''}`
-      ].join('\n');
+        `**Primary action:** ${primaryAction}${primaryCount ? `s (${primaryCount})` : ''}`
+      ];
 
       embed.addFields({
         name: '📋 Summary',
-        value: summaryText,
+        value: summaryLines.join('\n'),
         inline: false
       });
 
-      await interaction.editReply({
-        embeds: [embed]
-      });
+      await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
       console.error('Error in modstats command:', error);
-      
+
       const errorEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Statistics Error')
@@ -138,5 +138,5 @@ module.exports = {
         await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     }
-  },
+  }
 };

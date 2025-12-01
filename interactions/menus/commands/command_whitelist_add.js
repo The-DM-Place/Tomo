@@ -6,24 +6,24 @@ module.exports = {
   async execute(interaction) {
     try {
       if (!interaction.guild) {
-        return await interaction.reply({ 
-          content: 'This command can only be used in a server!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'This command can only be used in a server!',
+          ephemeral: true
         });
       }
 
       if (!interaction.values || interaction.values.length === 0) {
-        return await interaction.reply({ 
-          content: 'No roles were selected!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'No roles were selected!',
+          ephemeral: true
         });
       }
 
       const match = interaction.customId.match(/^command_whitelist_add_menu_(.+)$/);
       if (!match) {
-        return await interaction.reply({ 
-          content: 'Invalid command identifier!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'Invalid command identifier!',
+          ephemeral: true
         });
       }
 
@@ -33,7 +33,7 @@ module.exports = {
 
       for (const roleId of interaction.values) {
         try {
-          await ConfigModel.addCommandWhitelistRole(commandName, roleId);
+          await ConfigModel.setCommandWhitelist(commandName, roleId);
           successCount++;
           logger.info(`Added role ${roleId} to whitelist for command ${commandName} by ${interaction.user.tag}`);
         } catch (error) {
@@ -50,25 +50,25 @@ module.exports = {
         responseMessage += ` ${alreadyAdded.length} role(s) were already in the whitelist or failed to add.`;
       }
 
-      await interaction.reply({ 
-        content: responseMessage, 
-        ephemeral: true 
+      await interaction.reply({
+        content: responseMessage,
+        ephemeral: true
       });
 
     } catch (error) {
       logger.error('Error in command_whitelist_add_menu:', error);
-      
+
       const errorMessage = 'An error occurred while adding roles to whitelist. Please try again.';
-      
+
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.followUp({
+          content: errorMessage,
+          ephemeral: true
         });
       } else {
-        await interaction.reply({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.reply({
+          content: errorMessage,
+          ephemeral: true
         });
       }
     }

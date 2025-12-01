@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { REST, Routes } = require('discord.js');
 const logger = require('../utils/logger');
+const metrics = require('../utils/performanceTracker');
 
 async function getCommandFiles(dir, baseDir = dir) {
 	let commandFiles = [];
@@ -50,7 +51,14 @@ async function loadCommands(client) {
 					continue;
 				}
 
-				client.commands.set(command.data.name, command);
+				client.commands.set(
+					command.data.name,
+					{
+						...command,
+						execute: metrics.wrapCommandHandler(command.execute)
+					}
+				);
+
 				commands.push(command.data.toJSON());
 
 				const relativePath = path.relative(commandsPath, filePath);
@@ -97,9 +105,10 @@ async function registerSlashCommands(commands) {
 				`Successfully reloaded ${commands.length} guild application (/) commands.`
 			);
 		} else {
-			await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
-				body: commands,
-			});
+			await rest.put(
+				Routes.applicationCommands(process.env.CLIENT_ID),
+				{ body: commands }
+			);
 			logger.success(
 				`Successfully reloaded ${commands.length} global application (/) commands.`
 			);
@@ -119,7 +128,15 @@ async function reloadCommand(client, commandName) {
 			const command = require(filePath);
 
 			if (command.data && command.data.name === commandName) {
-				client.commands.set(command.data.name, command);
+
+				client.commands.set(
+					command.data.name,
+					{
+						...command,
+						execute: metrics.wrapCommandHandler(command.execute)
+					}
+				);
+
 				logger.success(`Reloaded command: ${commandName}`);
 				return true;
 			}

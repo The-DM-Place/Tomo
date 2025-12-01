@@ -1,10 +1,16 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ButtonBuilder,
+  ActionRowBuilder,
+  ButtonStyle
+} = require('discord.js');
+
 const permissionChecker = require('../../utils/permissionChecker');
 const moderationLogger = require('../../utils/moderationLogger');
 const ModerationActionModel = require('../../models/ModerationActionModel');
 const ConfigModel = require('../../models/ConfigModel');
 const { processBanEmbedTemplate } = require('../../utils/templateProcessor');
-
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,17 +19,20 @@ module.exports = {
     .addUserOption(option =>
       option.setName('user')
         .setDescription('The user to ban')
-        .setRequired(true))
+        .setRequired(true)
+    )
     .addStringOption(option =>
       option.setName('reason')
         .setDescription('Reason for the ban')
-        .setRequired(false))
+        .setRequired(false)
+    )
     .addIntegerOption(option =>
       option.setName('delete_messages')
         .setDescription('Delete messages from the last X days (0-7)')
         .setMinValue(0)
         .setMaxValue(7)
-        .setRequired(false)),
+        .setRequired(false)
+    ),
   isPublic: false,
 
   async execute(interaction) {
@@ -31,141 +40,110 @@ module.exports = {
     if (!hasPermission) return;
 
     try {
-      const targetUser = interaction.options.getUser('user');
+      const targetMember = interaction.options.getMember('user');
+      const targetUser = targetMember?.user ?? interaction.options.getUser('user');
+
       const reason = interaction.options.getString('reason') || 'No reason provided';
       const deleteMessages = interaction.options.getInteger('delete_messages') || 0;
 
-      if (targetUser.id === interaction.user.id) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🌸 Oops!')
-          .setDescription('You cannot ban yourself, silly! 💕')
-          .setFooter({ text: 'Nice try though! 💖' });
+      if (targetUser.id === interaction.user.id)
+        return sendFail(
+          interaction,
+          '🌸 Oops!',
+          'You cannot ban yourself, silly! 💕'
+        );
 
-        return await interaction.reply({
-          embeds: [embed],
-          ephemeral: true
-        });
-      }
+      if (targetUser.id === interaction.client.user.id)
+        return sendFail(
+          interaction,
+          '🌸 That’s not very nice!',
+          'I cannot ban myself! That would be quite counterproductive~ 💔'
+        );
 
-      if (targetUser.id === interaction.client.user.id) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🌸 That\'s not very nice!')
-          .setDescription('I cannot ban myself! That would be quite counterproductive~ 💔')
-          .setFooter({ text: 'We\'re supposed to be friends! 🥺' });
-
-        return await interaction.reply({
-          embeds: [embed],
-          ephemeral: true
-        });
-      }
-
-      const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-      
       if (targetMember) {
-        if (targetMember.id === interaction.guild.ownerId) {
-          const embed = new EmbedBuilder()
-            .setColor(0xFFB6C1)
-            .setTitle('👑 Ultimate Power!')
-            .setDescription('Cannot ban the server owner! They have ultimate power~ ✨')
-            .setFooter({ text: 'They literally own this place! 💫' });
+        if (targetMember.id === interaction.guild.ownerId)
+          return sendFail(
+            interaction,
+            '👑 Ultimate Power!',
+            'Cannot ban the server owner!'
+          );
 
-          return await interaction.reply({
-            embeds: [embed],
-            ephemeral: true
-          });
+        const mod = interaction.member;
+
+        if (
+          targetMember.roles.highest.position >= mod.roles.highest.position &&
+          interaction.user.id !== interaction.guild.ownerId
+        ) {
+          return sendFail(
+            interaction,
+            '👑 Role Hierarchy',
+            'You cannot ban someone with equal or higher roles than you!'
+          );
         }
 
-        const moderatorMember = interaction.member;
-        if (targetMember.roles.highest.position >= moderatorMember.roles.highest.position && 
-            interaction.user.id !== interaction.guild.ownerId) {
-          const embed = new EmbedBuilder()
-            .setColor(0xFFB6C1)
-            .setTitle('👑 Role Hierarchy')
-            .setDescription('You cannot ban someone with equal or higher roles than you!')
-            .setFooter({ text: 'Respect the hierarchy! ✊' });
+        const bot = interaction.guild.members.me;
+        if (targetMember.roles.highest.position >= bot.roles.highest.position)
+          return sendFail(
+            interaction,
+            '🥺 I Need Higher Permissions!',
+            'I cannot ban someone with equal or higher roles than me!'
+          );
 
-          return await interaction.reply({
-            embeds: [embed],
-            ephemeral: true
-          });
-        }
-
-        const botMember = interaction.guild.members.me;
-        if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
-          const embed = new EmbedBuilder()
-            .setColor(0xFFB6C1)
-            .setTitle('🥺 I Need Higher Permissions!')
-            .setDescription('I cannot ban someone with equal or higher roles than me! Please move my role higher~')
-            .setFooter({ text: 'Help me help you! 💪' });
-
-          return await interaction.reply({
-            embeds: [embed],
-            ephemeral: true
-          });
-        }
-
-        if (!targetMember.bannable) {
-          const embed = new EmbedBuilder()
-            .setColor(0xFFB6C1)
-            .setTitle('🚫 Cannot Ban User')
-            .setDescription('I cannot ban this user due to role hierarchy or permissions!')
-            .setFooter({ text: 'Discord won\'t let me! 💔' });
-
-          return await interaction.reply({
-            embeds: [embed],
-            ephemeral: true
-          });
-        }
+        if (!targetMember.bannable)
+          return sendFail(
+            interaction,
+            '🚫 Cannot Ban User',
+            'I cannot ban this user due to Discord hierarchy or permissions!'
+          );
       }
 
-      const existingBan = await interaction.guild.bans.fetch(targetUser.id).catch(() => null);
-      if (existingBan) {
-        const alreadyBannedEmbed = new EmbedBuilder()
-          .setColor(0xFFB6C1)
-          .setTitle('🔨 Already Banned')
-          .setDescription(`${targetUser.tag} is already banned from this server!`)
-          .setFooter({ text: 'No duplicate ban action was logged.' })
-          .setTimestamp();
+      const existingBan = await interaction.guild.bans
+        .fetch(targetUser.id)
+        .catch(() => null);
 
-        return await interaction.reply({
-          embeds: [alreadyBannedEmbed],
-          ephemeral: true
-        });
-      }
+      if (existingBan)
+        return sendFail(
+          interaction,
+          '🔨 Already Banned',
+          `${targetUser.tag} is already banned.`
+        );
 
       await interaction.deferReply();
 
-      const dbAction = await ModerationActionModel.logAction({
-        type: 'ban',
-        userId: targetUser.id,
-        moderatorId: interaction.user.id,
-        reason: reason
-      });
+      const [
+        dbAction,
+        appealInvite,
+        appealsEnabled,
+        banTemplate
+      ] = await Promise.all([
+        ModerationActionModel.logAction({
+          type: 'ban',
+          userId: targetUser.id,
+          moderatorId: interaction.user.id,
+          reason
+        }),
+        ConfigModel.getAppealInvite(),
+        ConfigModel.isAppealsEnabled(),
+        ConfigModel.getBanEmbedTemplate()
+      ]);
 
-      const appealInvite = await ConfigModel.getAppealInvite();
-      const appealsEnabled = await ConfigModel.isAppealsEnabled();
-      const banTemplate = await ConfigModel.getBanEmbedTemplate();
-      
-      const processedTemplate = processBanEmbedTemplate(banTemplate, {
+      const processed = processBanEmbedTemplate(banTemplate, {
         user: targetUser,
         server: interaction.guild,
-        reason: reason,
+        reason,
         caseId: dbAction.caseId,
-        appealInvite: appealInvite,
+        appealInvite,
         moderator: interaction.user
       });
-      
+
       const dmEmbed = new EmbedBuilder()
-        .setColor(processedTemplate.color)
-        .setTitle(processedTemplate.title)
-        .setDescription(processedTemplate.description)
+        .setColor(processed.color)
+        .setTitle(processed.title)
+        .setDescription(processed.description)
         .addFields(
           {
             name: '💭 Reason',
-            value: `\`${reason}\``,
-            inline: false
+            value: `\`${reason}\``
           },
           {
             name: '📋 Case ID',
@@ -173,93 +151,90 @@ module.exports = {
             inline: true
           }
         )
-        .setFooter({ 
-          text: processedTemplate.footer,
-          iconURL: interaction.guild.iconURL() 
+        .setFooter({
+          text: processed.footer,
+          iconURL: interaction.guild.iconURL()
         })
         .setTimestamp();
 
-      let dmComponents = [];
+      const dmComponents = [];
+
       if (appealsEnabled && appealInvite) {
         dmEmbed.addFields({
           name: '⚖️ Appeal This Ban',
-          value: `If you believe this ban was unfair, you can join our appeal server to submit an appeal.\n\n**📋 Your Case ID:** \`${dbAction.caseId}\`\n**🆔 Your User ID:** \`${targetUser.id}\`\n`,
-          inline: false
+          value: `If you believe this ban was unfair, you can appeal.\n\n**Case ID:** \`${dbAction.caseId}\`\n**User ID:** \`${targetUser.id}\``
         });
 
-        const appealButton = new ButtonBuilder()
-          .setLabel('⚖️ Join Appeal Server')
-          .setStyle(ButtonStyle.Link)
-          .setURL(appealInvite);
-
-        dmComponents.push(new ActionRowBuilder().addComponents(appealButton));
+        dmComponents.push(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setLabel('⚖️ Join Appeal Server')
+              .setStyle(ButtonStyle.Link)
+              .setURL(appealInvite)
+          )
+        );
       }
 
       try {
-        const dmOptions = { embeds: [dmEmbed] };
-        if (dmComponents.length > 0) {
-          dmOptions.components = dmComponents;
-        }
-        await targetUser.send(dmOptions);
-      } catch (dmError) {
-        console.log(`Could not DM user ${targetUser.tag} about their ban:`, dmError.message);
-      }
+        await targetUser.send({
+          embeds: [dmEmbed],
+          components: dmComponents
+        });
+      } catch {}
 
-      const banOptions = {
+      await interaction.guild.members.ban(targetUser, {
         reason: `${reason} | Banned by: ${interaction.user.tag}`,
-        deleteMessageSeconds: deleteMessages * 24 * 60 * 60
-      };
-
-      await interaction.guild.members.ban(targetUser, banOptions);
+        deleteMessageSeconds: deleteMessages * 86400
+      });
 
       await moderationLogger.logAction(interaction.client, {
         type: 'ban',
         moderator: interaction.user,
         target: targetUser,
-        reason: reason,
+        reason,
         caseId: dbAction.caseId
       });
 
-      const successEmbed = new EmbedBuilder()
+
+      const success = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setDescription(`🔨 **${targetUser.tag} was banned** | ${reason}`)
-        .setFooter({ text: `Case ID: #${dbAction.caseId}` })
+        .setFooter({ text: `Case ID: ${dbAction.caseId}` })
         .setTimestamp();
 
       if (deleteMessages > 0) {
-        successEmbed.addFields({
+        success.addFields({
           name: '🧹 Messages Deleted',
-          value: `From the last ${deleteMessages} day(s)`,
+          value: `${deleteMessages} day(s)`,
           inline: true
         });
       }
 
-      await interaction.editReply({
-        embeds: [successEmbed]
-      });
+      return interaction.editReply({ embeds: [success] });
 
     } catch (error) {
-      console.error('Error in ban command:', error);
-      
+      console.error('Ban command error:', error);
+
       const errorEmbed = new EmbedBuilder()
         .setColor(0xFFB6C1)
         .setTitle('❌ Ban Failed')
-        .setFooter({ text: 'Please try again or contact support! 💔' })
+        .setDescription('An error occurred while attempting this ban.')
         .setTimestamp();
 
-      if (error.code === 10007) {
-        errorEmbed.setDescription('User not found! They might have already left the server~');
-      } else if (error.code === 10013) {
-        errorEmbed.setDescription('User is already banned! 🔨');
-      } else {
-        errorEmbed.setDescription('An error occurred while trying to ban the user! Please try again~');
-      }
+      if (interaction.deferred)
+        return interaction.editReply({ embeds: [errorEmbed] });
 
-      if (interaction.deferred) {
-        await interaction.editReply({ embeds: [errorEmbed] });
-      } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-      }
+      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
-  },
+  }
 };
+
+function sendFail(interaction, title, description) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFFB6C1)
+    .setTitle(title)
+    .setDescription(description)
+    .setFooter({ text: 'Action blocked 🔒' });
+
+  return interaction.reply({ embeds: [embed], ephemeral: true });
+}

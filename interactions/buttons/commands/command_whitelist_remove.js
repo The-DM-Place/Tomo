@@ -7,17 +7,17 @@ module.exports = {
   async execute(interaction) {
     try {
       if (!interaction.guild) {
-        return await interaction.reply({ 
-          content: 'This command can only be used in a server!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'This command can only be used in a server!',
+          ephemeral: true
         });
       }
 
       const match = interaction.customId.match(/^command_whitelist_remove_(.+)$/);
       if (!match) {
-        return await interaction.reply({ 
-          content: 'Invalid command identifier!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'Invalid command identifier!',
+          ephemeral: true
         });
       }
 
@@ -25,10 +25,14 @@ module.exports = {
       const config = await ConfigModel.getConfig();
       const command = config.commands[commandName];
 
-      if (!command || !command.whitelist || command.whitelist.length === 0) {
-        return await interaction.reply({ 
-          content: `No roles in whitelist for command \`${commandName}\`!`, 
-          ephemeral: true 
+      if (command && !Array.isArray(command.whitelist)) {
+        command.whitelist = typeof command.whitelist === 'string' && command.whitelist.length > 0 ? [command.whitelist] : [];
+      }
+
+      if (!command || command.whitelist.length === 0) {
+        return await interaction.reply({
+          content: `No roles in whitelist for command \`${commandName}\`!`,
+          ephemeral: true
         });
       }
 
@@ -40,9 +44,9 @@ module.exports = {
         .filter(Boolean);
 
       if (options.length === 0) {
-        return await interaction.reply({ 
-          content: 'No valid roles found in whitelist to remove!', 
-          ephemeral: true 
+        return await interaction.reply({
+          content: 'No valid roles found in whitelist to remove!',
+          ephemeral: true
         });
       }
 
@@ -63,18 +67,18 @@ module.exports = {
 
     } catch (error) {
       logger.error('Error in command_whitelist_remove:', error);
-      
+
       const errorMessage = 'An error occurred while loading role selector. Please try again.';
-      
+
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.followUp({
+          content: errorMessage,
+          ephemeral: true
         });
       } else {
-        await interaction.reply({ 
-          content: errorMessage, 
-          ephemeral: true 
+        await interaction.reply({
+          content: errorMessage,
+          ephemeral: true
         });
       }
     }
